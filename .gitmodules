@@ -1,0 +1,6 @@
+[submodule "mbedtls"]
+	path = mbedtls
+	url = https://github.com/raprepo/mbedtls.git
+[submodule "shadowsocks-netio"]
+	path = shadowsocks-netio
+	url = https://github.com/raprepo/shadowsocks-netio.git
