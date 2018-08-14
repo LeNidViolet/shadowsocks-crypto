@@ -1,6 +1,6 @@
 /**
  *  Copyright 2018, raprepo.
- *  Created by raprepo on 2018/8/13.
+ *  Created by raprepo on 2018/8/14.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,34 +20,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H
-#define SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H
+#include <stdlib.h>
+#include <stdio.h>
+#include "mbedtls/cipher.h"
+#include "mbedtls/md5.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 
-#include "shadowsocks-netio/shadowsocks-netio.h"
-
-#define DEFAULT_METHOD          "AES-256-CFB"
-#define DEFAULT_PASSWORD        "7Ykd3@!kfl0&"
-
-typedef struct SSCRYPTO_BASE_CONFIG{
-    const char *bind_host;
-    unsigned short bind_port;
-    unsigned int idel_timeout;
-
-    /* Client sode only. */
-    const char *ss_srv_addr;
-    unsigned short ss_srv_port;
-
-    const char *password;
-    const char *method;
-
-    int as_server;  /* 0=client, server otherwise */
-} SSCRYPTO_BASE_CONFIG;
-
-typedef struct SSCRYPTO_CTX{
-    SSCRYPTO_BASE_CONFIG config;
-    SSNETIO_CALLBACKS callbacks;
-} SSCRYPTO_CTX;
-
-int sscrypto_launch(SSCRYPTO_CTX *ctx);
-
-#endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H
+int main() {
+    return 0;
+}

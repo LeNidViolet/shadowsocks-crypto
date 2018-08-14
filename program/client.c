@@ -1,6 +1,6 @@
 /**
  *  Copyright 2018, raprepo.
- *  Created by raprepo on 2018/8/13.
+ *  Created by raprepo on 2018/8/14.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,7 +20,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+#include <stdlib.h>
+#include <stdio.h>
+#include "mbedtls/cipher.h"
+#include "mbedtls/md5.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 
-int main(void) {
+int main() {
     return 0;
 }
