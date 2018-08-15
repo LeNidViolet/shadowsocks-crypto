@@ -22,10 +22,26 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include "mbedtls/cipher.h"
-#include "mbedtls/md5.h"
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 
+void on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
+    (void)ctx;
+    printf("CONNECTION: %s:%d -> %s:%d\n",
+        addr->local->host, addr->local->port,
+        addr->remote->host, addr->remote->port);
+}
+
+void on_bind(const char *host, unsigned short port) {
+    printf("BIND ON %s:%d\n", host, port);
+}
+
 int main() {
+    SSCRYPTO_CTX ctx = { 0 };
+    ctx.config.as_server = 1;
+    ctx.callbacks.on_stream_connection_made = on_stream_connection_made;
+    ctx.callbacks.on_bind = on_bind;
+
+    sscrypto_launch(&ctx);
+
     return 0;
 }

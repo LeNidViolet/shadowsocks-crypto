@@ -28,11 +28,17 @@
 #include "mbedtls/md5.h"
 #include "internal.h"
 
+/* TODO: ADD AEAD CIPHER METHODS */
 
 static const CRYPTO_INFO Methods[] = {
+    {MBEDTLS_CIPHER_AES_128_CFB128, "AES-128-CFB128", "AES-128-CFB", 16, 16},
+    {MBEDTLS_CIPHER_AES_192_CFB128, "AES-192-CFB128", "AES-192-CFB", 24, 16},
     {MBEDTLS_CIPHER_AES_256_CFB128, "AES-256-CFB128", "AES-256-CFB", 32, 16},
-    {MBEDTLS_CIPHER_AES_256_GCM, "AES-256-GCM", "AES-256-GCM", 32, 16},
+    {MBEDTLS_CIPHER_AES_128_CTR, "AES-128-CTR", "AES-128-CTR", 16, 16},
+    {MBEDTLS_CIPHER_AES_192_CTR, "AES-192-CTR", "AES-192-CTR", 24, 16},
     {MBEDTLS_CIPHER_AES_256_CTR, "AES-256-CTR", "AES-256-CTR", 32, 16},
+    {MBEDTLS_CIPHER_CAMELLIA_128_CFB128, "CAMELLIA-128-CFB128", "CAMELLIA-128-CFB", 16, 16},
+    {MBEDTLS_CIPHER_CAMELLIA_192_CFB128, "CAMELLIA-192-CFB128", "CAMELLIA-192-CFB", 24, 16},
     {MBEDTLS_CIPHER_CAMELLIA_256_CFB128, "CAMELLIA-256-CFB128", "CAMELLIA-256-CFB", 32, 16},
 };
 static unsigned int Methods_Count = sizeof(Methods) / sizeof(Methods[0]);
@@ -117,21 +123,6 @@ BREAK_LABEL:
 
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
-
-    return ret;
-}
-
-int gen_pair(
-    const char *seed,
-    unsigned char *key,
-    size_t key_len,
-    unsigned char *iv,
-    size_t iv_len) {
-    int ret;
-
-    ret = gen_key(seed, key, key_len);
-    if ( 0 == ret )
-        ret = gen_iv(seed, iv, iv_len);
 
     return ret;
 }

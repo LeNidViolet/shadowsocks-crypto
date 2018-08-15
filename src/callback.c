@@ -29,13 +29,15 @@
 static unsigned int ssn_outstanding = 0;
 static unsigned int dsn_outstanding = 0;
 
-static unsigned char crypto_space[MAX_TCP_BLOCK_LEN];
+static unsigned char crypto_space[MAX_TCP_FRAME_LEN];
+static mbedtls_cipher_context_t encrypt_dgram_ctx;
+static mbedtls_cipher_context_t decrypt_dgram_ctx;
 
 typedef struct {
     mbedtls_cipher_context_t encrypt_ctx;
     mbedtls_cipher_context_t decrypt_ctx;
-    unsigned char iv_encrypt[MAX_CRYPTO_IV_LEN];
-    unsigned char iv_decrypt[MAX_CRYPTO_IV_LEN];
+    unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
+    unsigned char iv_decrypt[MAX_CRYPTO_SALT_LEN];
     int first_encrypt;
     int first_decrypt;
 
@@ -43,13 +45,9 @@ typedef struct {
 } STREAM_SESSION;
 
 typedef struct {
-    mbedtls_cipher_context_t encrypt_ctx;
-    mbedtls_cipher_context_t decrypt_ctx;
 
     void *ctx;
 } DGRAM_SESSION;
-
-
 
 
 static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
@@ -64,6 +62,19 @@ static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
         CryptoEnv.key,
         8 * CryptoEnv.method->key_len,
         mode));
+}
+
+
+int init_calback_unit(void) {
+    init_cipher(&encrypt_dgram_ctx, MBEDTLS_ENCRYPT);
+    init_cipher(&decrypt_dgram_ctx, MBEDTLS_DECRYPT);
+
+    return 0;
+}
+
+void free_callback_unit(void) {
+    mbedtls_cipher_free(&encrypt_dgram_ctx);
+    mbedtls_cipher_free(&decrypt_dgram_ctx);
 }
 
 
@@ -135,9 +146,6 @@ void ssnetio_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
     ENSURE((dsn = malloc(sizeof(*dsn))) != NULL);
     memset(dsn, 0, sizeof(*dsn));
 
-    init_cipher(&dsn->encrypt_ctx, MBEDTLS_ENCRYPT);
-    init_cipher(&dsn->decrypt_ctx, MBEDTLS_DECRYPT);
-
     *ctx = dsn;
     if ( CryptoEnv.ori_cbs.on_new_dgram ) {
         CryptoEnv.ori_cbs.on_new_dgram(addr, &dsn->ctx);
@@ -154,9 +162,6 @@ void ssnetio_on_dgram_teardown(void *ctx) {
     if ( CryptoEnv.ori_cbs.on_dgram_teardown ) {
         CryptoEnv.ori_cbs.on_dgram_teardown(dsn->ctx);
     }
-
-    mbedtls_cipher_free(&dsn->encrypt_ctx);
-    mbedtls_cipher_free(&dsn->decrypt_ctx);
 
     if ( DEBUG_CHECKS )
         memset(dsn, -1, sizeof(*dsn));
@@ -301,27 +306,25 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, void *ctx) {
+int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf) {
     int ret;
-    unsigned char iv_encrypt[MAX_CRYPTO_IV_LEN];
+    unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
     size_t iv_len;
-    DGRAM_SESSION *dsn;
     const char *pers = "seed name here";
     size_t encrypt_len;
     unsigned char *pos;
 
-    dsn = (DGRAM_SESSION *)ctx;
     iv_len = CryptoEnv.method->iv_len;
     ret = gen_iv(pers, iv_encrypt, iv_len);
     BREAK_ON_FAILURE(ret);
 
     ret = mbedtls_cipher_set_iv(
-        &dsn->encrypt_ctx,
+        &encrypt_dgram_ctx,
         iv_encrypt,
         iv_len);
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_cipher_reset(&dsn->encrypt_ctx);
+    ret = mbedtls_cipher_reset(&encrypt_dgram_ctx);
     BREAK_ON_FAILURE(ret);
 
     encrypt_len = buf->data_len;
@@ -334,7 +337,7 @@ int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, void *ctx) {
     encrypt_len -= sizeof(iv_encrypt);
 
     ret = mbedtls_cipher_update(
-        &dsn->encrypt_ctx,
+        &encrypt_dgram_ctx,
         (const unsigned char*)buf->data_base,
         buf->data_len,
         pos,
@@ -353,32 +356,30 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, void *ctx) {
+int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf) {
     int ret;
-    DGRAM_SESSION *dsn;
     size_t decrypt_len, ret_len, iv_len;
     char *pos;
-    char iv_decrypt[MAX_CRYPTO_IV_LEN];
+    char iv_decrypt[MAX_CRYPTO_SALT_LEN];
 
-    dsn = (DGRAM_SESSION *)ctx;
     iv_len = CryptoEnv.method->iv_len;
 
     memcpy(iv_decrypt, buf->buf_base, iv_len);
 
     ret = mbedtls_cipher_set_iv(
-        &dsn->decrypt_ctx,
+        &decrypt_dgram_ctx,
         (const unsigned char *)iv_decrypt,
         iv_len);
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_cipher_reset(&dsn->decrypt_ctx);
+    ret = mbedtls_cipher_reset(&decrypt_dgram_ctx);
     BREAK_ON_FAILURE(ret);
 
     pos = buf->buf_base + iv_len;
     decrypt_len = buf->data_len - iv_len;
 
     ret = mbedtls_cipher_update(
-        &dsn->decrypt_ctx,
+        &decrypt_dgram_ctx,
         (const unsigned char *)pos,
         decrypt_len,
         crypto_space,

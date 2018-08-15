@@ -36,8 +36,8 @@ typedef struct {
 }CRYPTO_INFO;
 
 
-#define MAX_CRYPTO_KEY_LEN      (32)
-#define MAX_CRYPTO_IV_LEN       MAX_IV_LEN
+#define MAX_CRYPTO_KEY_LEN          (32)
+#define MAX_CRYPTO_SALT_LEN         MAX_SALT_LEN
 typedef struct {
     const CRYPTO_INFO *method;
     unsigned char key[MAX_CRYPTO_KEY_LEN];
@@ -87,19 +87,14 @@ if ( !(value) )                                         \
 int gen_iv(const char *seed, unsigned char *iv, size_t iv_len);
 /* return 0 if success */
 int gen_key(const char *seed, unsigned char *key, size_t key_len);
-/* return 0 if success */
-int gen_pair(
-    const char *seed,
-    unsigned char *key,
-    size_t key_len,
-    unsigned char *iv,
-    size_t iv_len);
 
 const CRYPTO_INFO *get_method_by_name(const char *name);
 const CRYPTO_INFO *get_method_by_type(mbedtls_cipher_type_t type);
 
 
 /* CALLBACK.C */
+int init_calback_unit(void);
+void free_callback_unit(void);
 void ssnetio_on_msg(int level, const char *msg);
 void ssnetio_on_bind(const char *host, unsigned short port);
 void ssnetio_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
@@ -111,8 +106,8 @@ void ssnetio_on_plain_stream(SSNETIO_BUF *buf, int direct, void *ctx);
 void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx);
 int ssnetio_on_stream_encrypt(SSNETIO_BUF *buf, void *ctx);
 int ssnetio_on_stream_decrypt(SSNETIO_BUF *buf, void *ctx);
-int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, void *ctx);
-int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, void *ctx);
+int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf);
+int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf);
 
 extern CRYPTO_ENV CryptoEnv;
 #endif //SHADOWSOCKS_CRYPTO_INTERNAL_H

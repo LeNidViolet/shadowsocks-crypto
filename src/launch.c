@@ -66,11 +66,15 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     /* Save caller's callbacks */
     CryptoEnv.ori_cbs = ctx->callbacks;
 
+    init_calback_unit();
+
     if ( 0 == ctx->config.as_server ) {
         ret = ssnetio_client_launch(&netioctx);
     } else {
         ret = ssnetio_server_launch(&netioctx);
     }
+
+    free_callback_unit();
 
 BREAK_LABEL:
 
