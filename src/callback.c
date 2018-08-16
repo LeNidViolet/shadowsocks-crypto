@@ -328,13 +328,13 @@ int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf) {
     BREAK_ON_FAILURE(ret);
 
     encrypt_len = buf->data_len;
-    encrypt_len += sizeof(iv_encrypt);
+    encrypt_len += iv_len;
     CHECK(encrypt_len <= buf->buf_len);
 
     pos = crypto_space;
-    memcpy(pos, iv_encrypt, sizeof(iv_encrypt));
-    pos += sizeof(iv_encrypt);
-    encrypt_len -= sizeof(iv_encrypt);
+    memcpy(pos, iv_encrypt, iv_len);
+    pos += iv_len;
+    encrypt_len -= iv_len;
 
     ret = mbedtls_cipher_update(
         &encrypt_dgram_ctx,
@@ -345,7 +345,7 @@ int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf) {
     BREAK_ON_FAILURE(ret);
     CHECK(buf->data_len == encrypt_len);
 
-    encrypt_len += sizeof(iv_encrypt);
+    encrypt_len += iv_len;
 
     memcpy(buf->buf_base, crypto_space, encrypt_len);
     buf->data_base = buf->buf_base;

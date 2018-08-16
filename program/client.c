@@ -28,10 +28,15 @@ void on_bind(const char *host, unsigned short port) {
     printf("BIND ON %s:%d\n", host, port);
 }
 
+void on_msg(int level, const char *msg) {
+    printf("%d %s\n", level, msg);
+}
+
 int main() {
     SSCRYPTO_CTX ctx = { 0 };
     ctx.config.as_server = 0;
     ctx.callbacks.on_bind = on_bind;
+    ctx.callbacks.on_msg = on_msg;
 
     sscrypto_launch(&ctx);
 
