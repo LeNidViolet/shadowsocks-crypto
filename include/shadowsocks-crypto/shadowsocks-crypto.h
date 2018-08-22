@@ -25,9 +25,6 @@
 
 #include "shadowsocks-netio/shadowsocks-netio.h"
 
-#define DEFAULT_METHOD          "AES-256-CFB"
-#define DEFAULT_PASSWORD        "7Ykd3@!kfl0&"
-
 typedef struct SSCRYPTO_BASE_CONFIG{
     const char *bind_host;
     unsigned short bind_port;

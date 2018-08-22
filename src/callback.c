@@ -29,7 +29,7 @@
 static unsigned int ssn_outstanding = 0;
 static unsigned int dsn_outstanding = 0;
 
-static unsigned char crypto_space[MAX_TCP_FRAME_LEN];
+static unsigned char crypto_space[MAX_SS_TCP_FRAME_LEN];
 static mbedtls_cipher_context_t encrypt_dgram_ctx;
 static mbedtls_cipher_context_t decrypt_dgram_ctx;
 
@@ -171,7 +171,7 @@ void ssnetio_on_dgram_teardown(void *ctx) {
     dsn_outstanding--;
 }
 
-void ssnetio_on_plain_stream(SSNETIO_BUF *buf, int direct, void *ctx) {
+void ssnetio_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
     STREAM_SESSION *ssn;
 
     if ( CryptoEnv.ori_cbs.on_plain_stream ) {
@@ -182,7 +182,7 @@ void ssnetio_on_plain_stream(SSNETIO_BUF *buf, int direct, void *ctx) {
     }
 }
 
-void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
+void ssnetio_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
     DGRAM_SESSION *dsn;
 
     if ( CryptoEnv.ori_cbs.on_plain_dgram ) {
@@ -193,7 +193,7 @@ void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
     }
 }
 
-int ssnetio_on_stream_encrypt(SSNETIO_BUF *buf, void *ctx) {
+int ssnetio_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
     int ret;
     size_t encrypt_len, iv_len;
     unsigned char *pos;
@@ -254,7 +254,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_stream_decrypt(SSNETIO_BUF *buf, void *ctx) {
+int ssnetio_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
     int ret = -1;
     char *pos;
     size_t ret_len, decrypt_len, iv_len;
@@ -306,7 +306,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf) {
+int ssnetio_on_dgram_encrypt(MEM_RANGE *buf) {
     int ret;
     unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
     size_t iv_len;
@@ -356,7 +356,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf) {
+int ssnetio_on_dgram_decrypt(MEM_RANGE *buf) {
     int ret;
     size_t decrypt_len, ret_len, iv_len;
     char *pos;

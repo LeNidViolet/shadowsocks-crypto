@@ -27,6 +27,9 @@
 #include "shadowsocks-netio/shadowsocks-netio.h"
 #include "mbedtls/cipher.h"
 
+#define DEFAULT_METHOD          "AES-256-CFB"
+#define DEFAULT_PASSWORD        "7Ykd3@!kfl0&"
+
 typedef struct {
     const mbedtls_cipher_type_t type;
     const char *mbedtls_name;
@@ -37,7 +40,7 @@ typedef struct {
 
 
 #define MAX_CRYPTO_KEY_LEN          (32)
-#define MAX_CRYPTO_SALT_LEN         MAX_SALT_LEN
+#define MAX_CRYPTO_SALT_LEN         MAX_SS_SALT_LEN
 typedef struct {
     const CRYPTO_INFO *method;
     unsigned char key[MAX_CRYPTO_KEY_LEN];
@@ -102,12 +105,12 @@ void ssnetio_on_new_stream(ADDRESS *addr, void **ctx);
 void ssnetio_on_stream_teardown(void *ctx);
 void ssnetio_on_new_dgram(ADDRESS_PAIR *addr, void **ctx);
 void ssnetio_on_dgram_teardown(void *ctx);
-void ssnetio_on_plain_stream(SSNETIO_BUF *buf, int direct, void *ctx);
-void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx);
-int ssnetio_on_stream_encrypt(SSNETIO_BUF *buf, void *ctx);
-int ssnetio_on_stream_decrypt(SSNETIO_BUF *buf, void *ctx);
-int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf);
-int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf);
+void ssnetio_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
+void ssnetio_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx);
+int ssnetio_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
+int ssnetio_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
+int ssnetio_on_dgram_encrypt(MEM_RANGE *buf);
+int ssnetio_on_dgram_decrypt(MEM_RANGE *buf);
 
 extern CRYPTO_ENV CryptoEnv;
 #endif //SHADOWSOCKS_CRYPTO_INTERNAL_H
