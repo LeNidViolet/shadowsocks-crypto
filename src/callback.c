@@ -78,19 +78,19 @@ void free_callback_unit(void) {
 }
 
 
-void ssnetio_on_msg(int level, const char *msg) {
+void sscrypto_on_msg(int level, const char *msg) {
     if ( CryptoEnv.ori_cbs.on_msg ) {
         CryptoEnv.ori_cbs.on_msg(level, msg);
     }
 }
 
-void ssnetio_on_bind(const char *host, unsigned short port) {
+void sscrypto_on_bind(const char *host, unsigned short port) {
     if ( CryptoEnv.ori_cbs.on_bind ) {
         CryptoEnv.ori_cbs.on_bind(host, port);
     }
 }
 
-void ssnetio_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
     STREAM_SESSION *ssn;
 
     if ( CryptoEnv.ori_cbs.on_stream_connection_made ) {
@@ -101,7 +101,7 @@ void ssnetio_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
     }
 }
 
-void ssnetio_on_new_stream(ADDRESS *addr, void **ctx) {
+void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     STREAM_SESSION *ssn;
 
     ENSURE((ssn = malloc(sizeof(*ssn))) != NULL);
@@ -114,13 +114,13 @@ void ssnetio_on_new_stream(ADDRESS *addr, void **ctx) {
 
     *ctx = ssn;
     if ( CryptoEnv.ori_cbs.on_new_stream ) {
-        CryptoEnv.ori_cbs.on_new_stream(addr, &ssn->ctx);
+        CryptoEnv.ori_cbs.on_new_stream(addr, &ssn->ctx, stream_id);
     }
 
     ssn_outstanding++;
 }
 
-void ssnetio_on_stream_teardown(void *ctx) {
+void sscrypto_on_stream_teardown(void *ctx) {
     STREAM_SESSION *ssn;
     ssn = (STREAM_SESSION *)ctx;
     CHECK(ssn);
@@ -140,7 +140,7 @@ void ssnetio_on_stream_teardown(void *ctx) {
     ssn_outstanding--;
 }
 
-void ssnetio_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
+void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
     DGRAM_SESSION *dsn;
 
     ENSURE((dsn = malloc(sizeof(*dsn))) != NULL);
@@ -154,7 +154,7 @@ void ssnetio_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
     dsn_outstanding++;
 }
 
-void ssnetio_on_dgram_teardown(void *ctx) {
+void sscrypto_on_dgram_teardown(void *ctx) {
     DGRAM_SESSION *dsn;
     dsn = (DGRAM_SESSION *)ctx;
     CHECK(dsn);
@@ -171,18 +171,21 @@ void ssnetio_on_dgram_teardown(void *ctx) {
     dsn_outstanding--;
 }
 
-void ssnetio_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
+int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
     STREAM_SESSION *ssn;
+    int action = PASS;
 
     if ( CryptoEnv.ori_cbs.on_plain_stream ) {
         ssn = (STREAM_SESSION *)ctx;
         CHECK(ssn);
 
-        CryptoEnv.ori_cbs.on_plain_stream(buf, direct, ssn->ctx);
+        action = CryptoEnv.ori_cbs.on_plain_stream(buf, direct, ssn->ctx);
     }
+
+    return action;
 }
 
-void ssnetio_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
+void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
     DGRAM_SESSION *dsn;
 
     if ( CryptoEnv.ori_cbs.on_plain_dgram ) {
@@ -193,7 +196,7 @@ void ssnetio_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
     }
 }
 
-int ssnetio_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
+int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
     int ret;
     size_t encrypt_len, iv_len;
     unsigned char *pos;
@@ -254,7 +257,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
+int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
     int ret = -1;
     char *pos;
     size_t ret_len, decrypt_len, iv_len;
@@ -306,7 +309,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_dgram_encrypt(MEM_RANGE *buf) {
+int sscrypto_on_dgram_encrypt(MEM_RANGE *buf) {
     int ret;
     unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
     size_t iv_len;
@@ -356,7 +359,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int ssnetio_on_dgram_decrypt(MEM_RANGE *buf) {
+int sscrypto_on_dgram_decrypt(MEM_RANGE *buf) {
     int ret;
     size_t decrypt_len, ret_len, iv_len;
     char *pos;

@@ -41,6 +41,10 @@ SET(SHADOWSOCKSCRYPTO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/callback.c
         )
 
-ADD_LIBRARY(shadowsocks-crypto ${SHADOWSOCKSCRYPTO_SRC})
+IF( ENABLE_SHAREDLIB )
+    ADD_LIBRARY(shadowsocks-crypto SHARED ${SHADOWSOCKSCRYPTO_SRC})
+ELSE()
+    ADD_LIBRARY(shadowsocks-crypto STATIC ${SHADOWSOCKSCRYPTO_SRC})
+ENDIF()
 TARGET_LINK_LIBRARIES(shadowsocks-crypto shadowsocks-netio)
 TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls)

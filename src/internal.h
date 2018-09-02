@@ -98,19 +98,19 @@ const CRYPTO_INFO *get_method_by_type(mbedtls_cipher_type_t type);
 /* CALLBACK.C */
 int init_calback_unit(void);
 void free_callback_unit(void);
-void ssnetio_on_msg(int level, const char *msg);
-void ssnetio_on_bind(const char *host, unsigned short port);
-void ssnetio_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
-void ssnetio_on_new_stream(ADDRESS *addr, void **ctx);
-void ssnetio_on_stream_teardown(void *ctx);
-void ssnetio_on_new_dgram(ADDRESS_PAIR *addr, void **ctx);
-void ssnetio_on_dgram_teardown(void *ctx);
-void ssnetio_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
-void ssnetio_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx);
-int ssnetio_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
-int ssnetio_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
-int ssnetio_on_dgram_encrypt(MEM_RANGE *buf);
-int ssnetio_on_dgram_decrypt(MEM_RANGE *buf);
+void sscrypto_on_msg(int level, const char *msg);
+void sscrypto_on_bind(const char *host, unsigned short port);
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
+void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id);
+void sscrypto_on_stream_teardown(void *ctx);
+void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx);
+void sscrypto_on_dgram_teardown(void *ctx);
+int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
+void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx);
+int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
+int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
+int sscrypto_on_dgram_encrypt(MEM_RANGE *buf);
+int sscrypto_on_dgram_decrypt(MEM_RANGE *buf);
 
 extern CRYPTO_ENV CryptoEnv;
 #endif //SHADOWSOCKS_CRYPTO_INTERNAL_H

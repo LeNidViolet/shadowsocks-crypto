@@ -49,19 +49,19 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     netioctx.config.ss_srv_port     = ctx->config.ss_srv_port;
     netioctx.config.idel_timeout    = ctx->config.idel_timeout;
 
-    netioctx.callbacks.on_msg                       = ssnetio_on_msg;
-    netioctx.callbacks.on_bind                      = ssnetio_on_bind;
-    netioctx.callbacks.on_stream_connection_made    = ssnetio_on_stream_connection_made;
-    netioctx.callbacks.on_new_stream                = ssnetio_on_new_stream;
-    netioctx.callbacks.on_stream_teardown           = ssnetio_on_stream_teardown;
-    netioctx.callbacks.on_new_dgram                 = ssnetio_on_new_dgram;
-    netioctx.callbacks.on_dgram_teardown            = ssnetio_on_dgram_teardown;
-    netioctx.callbacks.on_stream_encrypt            = ssnetio_on_stream_encrypt;
-    netioctx.callbacks.on_stream_decrypt            = ssnetio_on_stream_decrypt;
-    netioctx.callbacks.on_dgram_encrypt             = ssnetio_on_dgram_encrypt;
-    netioctx.callbacks.on_dgram_decrypt             = ssnetio_on_dgram_decrypt;
-    netioctx.callbacks.on_plain_stream              = ssnetio_on_plain_stream;
-    netioctx.callbacks.on_plain_dgram               = ssnetio_on_plain_dgram;
+    netioctx.callbacks.on_msg                       = sscrypto_on_msg;
+    netioctx.callbacks.on_bind                      = sscrypto_on_bind;
+    netioctx.callbacks.on_stream_connection_made    = sscrypto_on_stream_connection_made;
+    netioctx.callbacks.on_new_stream                = sscrypto_on_new_stream;
+    netioctx.callbacks.on_stream_teardown           = sscrypto_on_stream_teardown;
+    netioctx.callbacks.on_new_dgram                 = sscrypto_on_new_dgram;
+    netioctx.callbacks.on_dgram_teardown            = sscrypto_on_dgram_teardown;
+    netioctx.callbacks.on_stream_encrypt            = sscrypto_on_stream_encrypt;
+    netioctx.callbacks.on_stream_decrypt            = sscrypto_on_stream_decrypt;
+    netioctx.callbacks.on_dgram_encrypt             = sscrypto_on_dgram_encrypt;
+    netioctx.callbacks.on_dgram_decrypt             = sscrypto_on_dgram_decrypt;
+    netioctx.callbacks.on_plain_stream              = sscrypto_on_plain_stream;
+    netioctx.callbacks.on_plain_dgram               = sscrypto_on_plain_dgram;
 
     /* Save caller's callbacks */
     CryptoEnv.ori_cbs = ctx->callbacks;
