@@ -29,7 +29,7 @@
 static unsigned int ssn_outstanding = 0;
 static unsigned int dsn_outstanding = 0;
 
-static unsigned char crypto_space[MAX_SS_TCP_FRAME_LEN];
+static unsigned char crypto_space[16 * 1024 + MAX_SS_TCP_WRAPPER_LEN];
 static mbedtls_cipher_context_t encrypt_dgram_ctx;
 static mbedtls_cipher_context_t decrypt_dgram_ctx;
 
