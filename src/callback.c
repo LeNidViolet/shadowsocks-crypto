@@ -91,108 +91,108 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
 }
 
 void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
-    STREAM_SESSION *ssn;
+    STREAM_SESSION *ss;
 
     if ( CryptoEnv.ori_cbs.on_stream_connection_made ) {
-        ssn = (STREAM_SESSION *)ctx;
-        CHECK(ssn);
+        ss = (STREAM_SESSION *)ctx;
+        CHECK(ss);
 
-        CryptoEnv.ori_cbs.on_stream_connection_made(addr, ssn->ctx);
+        CryptoEnv.ori_cbs.on_stream_connection_made(addr, ss->ctx);
     }
 }
 
 void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
-    STREAM_SESSION *ssn;
+    STREAM_SESSION *ss;
 
-    ENSURE((ssn = malloc(sizeof(*ssn))) != NULL);
-    memset(ssn, 0, sizeof(*ssn));
+    ENSURE((ss = malloc(sizeof(*ss))) != NULL);
+    memset(ss, 0, sizeof(*ss));
 
-    init_cipher(&ssn->encrypt_ctx, MBEDTLS_ENCRYPT);
-    init_cipher(&ssn->decrypt_ctx, MBEDTLS_DECRYPT);
-    ssn->first_encrypt = 1;
-    ssn->first_decrypt = 1;
+    init_cipher(&ss->encrypt_ctx, MBEDTLS_ENCRYPT);
+    init_cipher(&ss->decrypt_ctx, MBEDTLS_DECRYPT);
+    ss->first_encrypt = 1;
+    ss->first_decrypt = 1;
 
-    *ctx = ssn;
+    *ctx = ss;
     if ( CryptoEnv.ori_cbs.on_new_stream ) {
-        CryptoEnv.ori_cbs.on_new_stream(addr, &ssn->ctx, stream_id);
+        CryptoEnv.ori_cbs.on_new_stream(addr, &ss->ctx, stream_id);
     }
 
     ssn_outstanding++;
 }
 
 void sscrypto_on_stream_teardown(void *ctx) {
-    STREAM_SESSION *ssn;
-    ssn = (STREAM_SESSION *)ctx;
-    CHECK(ssn);
+    STREAM_SESSION *ss;
+    ss = (STREAM_SESSION *)ctx;
+    CHECK(ss);
 
     if ( CryptoEnv.ori_cbs.on_stream_teardown ) {
-        CryptoEnv.ori_cbs.on_stream_teardown(ssn->ctx);
+        CryptoEnv.ori_cbs.on_stream_teardown(ss->ctx);
     }
 
-    mbedtls_cipher_free(&ssn->encrypt_ctx);
-    mbedtls_cipher_free(&ssn->decrypt_ctx);
+    mbedtls_cipher_free(&ss->encrypt_ctx);
+    mbedtls_cipher_free(&ss->decrypt_ctx);
 
     if ( DEBUG_CHECKS )
-        memset(ssn, -1, sizeof(*ssn));
+        memset(ss, -1, sizeof(*ss));
 
-    free(ssn);
+    free(ss);
 
     ssn_outstanding--;
 }
 
 void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
-    DGRAM_SESSION *dsn;
+    DGRAM_SESSION *ds;
 
-    ENSURE((dsn = malloc(sizeof(*dsn))) != NULL);
-    memset(dsn, 0, sizeof(*dsn));
+    ENSURE((ds = malloc(sizeof(*ds))) != NULL);
+    memset(ds, 0, sizeof(*ds));
 
-    *ctx = dsn;
+    *ctx = ds;
     if ( CryptoEnv.ori_cbs.on_new_dgram ) {
-        CryptoEnv.ori_cbs.on_new_dgram(addr, &dsn->ctx);
+        CryptoEnv.ori_cbs.on_new_dgram(addr, &ds->ctx);
     }
 
     dsn_outstanding++;
 }
 
 void sscrypto_on_dgram_teardown(void *ctx) {
-    DGRAM_SESSION *dsn;
-    dsn = (DGRAM_SESSION *)ctx;
-    CHECK(dsn);
+    DGRAM_SESSION *ds;
+    ds = (DGRAM_SESSION *)ctx;
+    CHECK(ds);
 
     if ( CryptoEnv.ori_cbs.on_dgram_teardown ) {
-        CryptoEnv.ori_cbs.on_dgram_teardown(dsn->ctx);
+        CryptoEnv.ori_cbs.on_dgram_teardown(ds->ctx);
     }
 
     if ( DEBUG_CHECKS )
-        memset(dsn, -1, sizeof(*dsn));
+        memset(ds, -1, sizeof(*ds));
 
-    free(dsn);
+    free(ds);
 
     dsn_outstanding--;
 }
 
 int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
-    STREAM_SESSION *ssn;
+    STREAM_SESSION *ss;
     int action = PASS;
 
     if ( CryptoEnv.ori_cbs.on_plain_stream ) {
-        ssn = (STREAM_SESSION *)ctx;
-        CHECK(ssn);
+        ss = (STREAM_SESSION *)ctx;
+        CHECK(ss);
 
-        action = CryptoEnv.ori_cbs.on_plain_stream(buf, direct, ssn->ctx);
+        action = CryptoEnv.ori_cbs.on_plain_stream(buf, direct, ss->ctx);
     }
 
     return action;
 }
 
 void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
-    DGRAM_SESSION *dsn;
+    DGRAM_SESSION *ds;
 
     if ( CryptoEnv.ori_cbs.on_plain_dgram ) {
-        dsn = (DGRAM_SESSION *)ctx;
-        CHECK(dsn);
+        ds = (DGRAM_SESSION *)ctx;
+        CHECK(ds);
 
-        CryptoEnv.ori_cbs.on_plain_dgram(buf, direct, dsn->ctx);
+        CryptoEnv.ori_cbs.on_plain_dgram(buf, direct, ds->ctx);
     }
 }
 
@@ -200,42 +200,42 @@ int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
     int ret;
     size_t encrypt_len, iv_len;
     unsigned char *pos;
-    STREAM_SESSION *ssn;
+    STREAM_SESSION *ss;
 
     CHECK(buf->data_len <= sizeof(crypto_space));
 
-    ssn = (STREAM_SESSION *)ctx;
+    ss = (STREAM_SESSION *)ctx;
     iv_len = CryptoEnv.method->iv_len;
 
-    if ( ssn->first_encrypt ) {
+    if ( ss->first_encrypt ) {
         const char *seed = "seed name here";
 
-        ret = gen_iv(seed, ssn->iv_encrypt, iv_len);
+        ret = gen_iv(seed, ss->iv_encrypt, iv_len);
         BREAK_ON_FAILURE(ret);
 
         ret = mbedtls_cipher_set_iv(
-            &ssn->encrypt_ctx,
-            (const unsigned char*)ssn->iv_encrypt,
+            &ss->encrypt_ctx,
+            (const unsigned char*)ss->iv_encrypt,
             iv_len);
         BREAK_ON_FAILURE(ret);
     }
 
     encrypt_len = buf->data_len;
-    if ( ssn->first_encrypt ) {
+    if ( ss->first_encrypt ) {
         encrypt_len += iv_len;
     }
     CHECK(encrypt_len <= buf->buf_len);
 
     pos = crypto_space;
 
-    if ( ssn->first_encrypt ) {
-        memcpy(pos, ssn->iv_encrypt, iv_len);
+    if ( ss->first_encrypt ) {
+        memcpy(pos, ss->iv_encrypt, iv_len);
         pos += iv_len;
         encrypt_len -= iv_len;
     }
 
     ret = mbedtls_cipher_update(
-        &ssn->encrypt_ctx,
+        &ss->encrypt_ctx,
         (const unsigned char*)buf->data_base,
         buf->data_len,
         pos,
@@ -243,9 +243,9 @@ int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
     BREAK_ON_FAILURE(ret);
     CHECK(buf->data_len == encrypt_len);
 
-    if ( ssn->first_encrypt ) {
+    if ( ss->first_encrypt ) {
         encrypt_len += iv_len;
-        ssn->first_encrypt = 0;
+        ss->first_encrypt = 0;
     }
 
     memcpy(buf->buf_base, crypto_space, encrypt_len);
@@ -261,21 +261,21 @@ int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
     int ret = -1;
     char *pos;
     size_t ret_len, decrypt_len, iv_len;
-    STREAM_SESSION *ssn;
+    STREAM_SESSION *ss;
 
     CHECK(buf->data_len <= sizeof(crypto_space));
 
-    ssn = (STREAM_SESSION *)ctx;
+    ss = (STREAM_SESSION *)ctx;
     iv_len = CryptoEnv.method->iv_len;
 
-    if ( ssn->first_decrypt ) {
+    if ( ss->first_decrypt ) {
         if ( buf->data_len < iv_len )
             BREAK_NOW;
 
-        memcpy(ssn->iv_decrypt, buf->data_base, iv_len);
+        memcpy(ss->iv_decrypt, buf->data_base, iv_len);
         ret = mbedtls_cipher_set_iv(
-            &ssn->decrypt_ctx,
-            ssn->iv_decrypt,
+            &ss->decrypt_ctx,
+            ss->iv_decrypt,
             iv_len);
         BREAK_ON_FAILURE(ret);
     }
@@ -283,13 +283,13 @@ int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
     decrypt_len = buf->data_len;
 
     pos = buf->data_base;
-    if ( ssn->first_decrypt ) {
+    if ( ss->first_decrypt ) {
         pos += iv_len;
         decrypt_len -= iv_len;
     }
 
     ret = mbedtls_cipher_update(
-        &ssn->decrypt_ctx,
+        &ss->decrypt_ctx,
         (const unsigned char *)pos,
         decrypt_len,
         crypto_space,
@@ -301,8 +301,8 @@ int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
     buf->data_base = buf->buf_base;
     buf->data_len = decrypt_len;
 
-    if ( ssn->first_decrypt )
-        ssn->first_decrypt = 0;
+    if ( ss->first_decrypt )
+        ss->first_decrypt = 0;
 
 BREAK_LABEL:
 
