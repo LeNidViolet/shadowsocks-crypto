@@ -28,7 +28,7 @@
 #include "mbedtls/cipher.h"
 
 #define DEFAULT_METHOD          "AES-256-CFB"
-#define DEFAULT_PASSWORD        "7Ykd3@!kfl0&"
+#define DEFAULT_PASSWORD        "123qwe"
 
 typedef struct {
     const mbedtls_cipher_type_t type;
