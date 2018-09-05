@@ -42,12 +42,12 @@ typedef struct {
     int first_decrypt;
 
     void *ctx;
-} STREAM_SESSION;
+} STREAM_SESSION_CRYP;
 
 typedef struct {
 
     void *ctx;
-} DGRAM_SESSION;
+} DGRAM_SESSION_CRYP;
 
 
 static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
@@ -91,10 +91,10 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
 }
 
 void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
-    STREAM_SESSION *ss;
+    STREAM_SESSION_CRYP *ss;
 
     if ( CryptoEnv.ori_cbs.on_stream_connection_made ) {
-        ss = (STREAM_SESSION *)ctx;
+        ss = (STREAM_SESSION_CRYP *)ctx;
         CHECK(ss);
 
         CryptoEnv.ori_cbs.on_stream_connection_made(addr, ss->ctx);
@@ -102,7 +102,7 @@ void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
 }
 
 void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
-    STREAM_SESSION *ss;
+    STREAM_SESSION_CRYP *ss;
 
     ENSURE((ss = malloc(sizeof(*ss))) != NULL);
     memset(ss, 0, sizeof(*ss));
@@ -121,8 +121,8 @@ void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
 }
 
 void sscrypto_on_stream_teardown(void *ctx) {
-    STREAM_SESSION *ss;
-    ss = (STREAM_SESSION *)ctx;
+    STREAM_SESSION_CRYP *ss;
+    ss = (STREAM_SESSION_CRYP *)ctx;
     CHECK(ss);
 
     if ( CryptoEnv.ori_cbs.on_stream_teardown ) {
@@ -141,7 +141,7 @@ void sscrypto_on_stream_teardown(void *ctx) {
 }
 
 void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
-    DGRAM_SESSION *ds;
+    DGRAM_SESSION_CRYP *ds;
 
     ENSURE((ds = malloc(sizeof(*ds))) != NULL);
     memset(ds, 0, sizeof(*ds));
@@ -155,8 +155,8 @@ void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
 }
 
 void sscrypto_on_dgram_teardown(void *ctx) {
-    DGRAM_SESSION *ds;
-    ds = (DGRAM_SESSION *)ctx;
+    DGRAM_SESSION_CRYP *ds;
+    ds = (DGRAM_SESSION_CRYP *)ctx;
     CHECK(ds);
 
     if ( CryptoEnv.ori_cbs.on_dgram_teardown ) {
@@ -172,11 +172,11 @@ void sscrypto_on_dgram_teardown(void *ctx) {
 }
 
 int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
-    STREAM_SESSION *ss;
+    STREAM_SESSION_CRYP *ss;
     int action = PASS;
 
     if ( CryptoEnv.ori_cbs.on_plain_stream ) {
-        ss = (STREAM_SESSION *)ctx;
+        ss = (STREAM_SESSION_CRYP *)ctx;
         CHECK(ss);
 
         action = CryptoEnv.ori_cbs.on_plain_stream(buf, direct, ss->ctx);
@@ -186,10 +186,10 @@ int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
 }
 
 void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
-    DGRAM_SESSION *ds;
+    DGRAM_SESSION_CRYP *ds;
 
     if ( CryptoEnv.ori_cbs.on_plain_dgram ) {
-        ds = (DGRAM_SESSION *)ctx;
+        ds = (DGRAM_SESSION_CRYP *)ctx;
         CHECK(ds);
 
         CryptoEnv.ori_cbs.on_plain_dgram(buf, direct, ds->ctx);
@@ -200,11 +200,11 @@ int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
     int ret;
     size_t encrypt_len, iv_len;
     unsigned char *pos;
-    STREAM_SESSION *ss;
+    STREAM_SESSION_CRYP *ss;
 
     CHECK(buf->data_len <= sizeof(crypto_space));
 
-    ss = (STREAM_SESSION *)ctx;
+    ss = (STREAM_SESSION_CRYP *)ctx;
     iv_len = CryptoEnv.method->iv_len;
 
     if ( ss->first_encrypt ) {
@@ -261,11 +261,11 @@ int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
     int ret = -1;
     char *pos;
     size_t ret_len, decrypt_len, iv_len;
-    STREAM_SESSION *ss;
+    STREAM_SESSION_CRYP *ss;
 
     CHECK(buf->data_len <= sizeof(crypto_space));
 
-    ss = (STREAM_SESSION *)ctx;
+    ss = (STREAM_SESSION_CRYP *)ctx;
     iv_len = CryptoEnv.method->iv_len;
 
     if ( ss->first_decrypt ) {
