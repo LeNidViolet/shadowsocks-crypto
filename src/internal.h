@@ -24,11 +24,8 @@
 #define SHADOWSOCKS_CRYPTO_INTERNAL_H
 
 #include <assert.h>
-#include "shadowsocks-netio/shadowsocks-netio.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "mbedtls/cipher.h"
-
-#define DEFAULT_METHOD          "AES-256-CFB"
-#define DEFAULT_PASSWORD        "123qwe"
 
 typedef struct {
     const mbedtls_cipher_type_t type;
@@ -45,7 +42,7 @@ typedef struct {
     const CRYPTO_INFO *method;
     unsigned char key[MAX_CRYPTO_KEY_LEN];
 
-    SSNETIO_CALLBACKS ori_cbs; /* caller's callback */
+    SSCRYPTO_CALLBACKS callbacks;
 }CRYPTO_ENV;
 
 #define BREAK_LABEL                                     \

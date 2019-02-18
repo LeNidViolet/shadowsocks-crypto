@@ -217,6 +217,7 @@ void on_connection(uv_stream_t *server, int status) {
     outgoing->ss_buf.buf_len = sizeof(outgoing->t.slab);
     outgoing->ss_buf.data_len = 0;
 
+    CHECK(0 == str_tcp_endpoint(&incoming->handle.tcp, peer, &incoming->peer));
     /* Emit a notify */
     ssnetio_on_new_stream(incoming);
 

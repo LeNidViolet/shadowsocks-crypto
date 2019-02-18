@@ -22,7 +22,7 @@
  */
 
 #include "uv.h"
-#include "shadowsocks-netio/shadowsocks-netio.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 #include "dgramsc.h"
 #include "dnsc.h"
@@ -64,22 +64,15 @@ int ssnetio_server_launch(SSNETIO_CTX *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
-    BREAK_ON_NULL(ctx->callbacks.on_stream_encrypt);
-    BREAK_ON_NULL(ctx->callbacks.on_stream_decrypt);
-    BREAK_ON_NULL(ctx->callbacks.on_dgram_encrypt);
-    BREAK_ON_NULL(ctx->callbacks.on_dgram_decrypt);
+    BREAK_ON_NULL(ctx->config.bind_host);
+    BREAK_ON_NULL(ctx->config.bind_port);
+    BREAK_ON_NULL(ctx->config.idel_timeout);
 
     runas(server_side);
     dgrams_init();
     dnsc_init();
 
     memcpy(&srv_ctx, ctx, sizeof(srv_ctx));
-    if ( !srv_ctx.config.bind_host )
-        srv_ctx.config.bind_host = DEFAULT_SS_SERVER_BIND_HOST;
-    if ( !srv_ctx.config.bind_port )
-        srv_ctx.config.bind_port = DEFAULT_SS_SERVER_BIND_PORT;
-    if ( !srv_ctx.config.idel_timeout )
-        srv_ctx.config.idel_timeout = DEFAULT_SS_SERVER_IDEL_TIMEOUT;
 
     ret = server_run(&srv_ctx);
 

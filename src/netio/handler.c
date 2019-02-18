@@ -28,104 +28,69 @@ typedef struct {
     void *param;
 }SND_CTX;
 
-extern SSNETIO_CTX *netio_ctx;
-
 static void ssnetio_write_stream_out_done(uv_write_t *req, int status);
+
+// 向上调用至CRYPTO对用的回调中
+void sscrypto_on_msg(int level, const char *msg);
+void sscrypto_on_bind(const char *host, unsigned short port);
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
+void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id);
+void sscrypto_on_stream_teardown(void *ctx);
+void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx);
+void sscrypto_on_dgram_teardown(void *ctx);
+int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
+void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx);
+int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
+int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
+int sscrypto_on_dgram_encrypt(MEM_RANGE *buf);
+int sscrypto_on_dgram_decrypt(MEM_RANGE *buf);
 
 void ssnetio_on_msg(int level, const char *format, ...) {
     va_list ap;
     char msg[1024];
 
-    BREAK_ON_NULL(netio_ctx->callbacks.on_msg);
-
     va_start(ap, format);
-
     vsnprintf(msg, sizeof(msg), format, ap);
-    netio_ctx->callbacks.on_msg(level, msg);
-
     va_end(ap);
 
-BREAK_LABEL:
-
-    return;
+    sscrypto_on_msg(level, msg);
 }
 
 void ssnetio_on_bind(const char *host, unsigned short port) {
-
-    BREAK_ON_NULL(netio_ctx->callbacks.on_bind);
-
-    netio_ctx->callbacks.on_bind(host, port);
-
-BREAK_LABEL:
-
-    return;
+    sscrypto_on_bind(host, port);
 }
 
 void ssnetio_on_connection_made(PROXY_NODE *pn) {
     ADDRESS_PAIR pair;
 
-    BREAK_ON_NULL(netio_ctx->callbacks.on_stream_connection_made);
-
     pair.local = &pn->incoming.peer;
     pair.remote = &pn->outgoing.peer;
 
-    netio_ctx->callbacks.on_stream_connection_made(&pair, pn->ctx);
-
-BREAK_LABEL:
-
-    return;
+    sscrypto_on_stream_connection_made(&pair, pn->ctx);
 }
 
 void ssnetio_on_new_stream(CONN *conn) {
     void *ctx = NULL;
 
-    CHECK(0 == str_tcp_endpoint(&conn->handle.tcp, peer, &conn->peer));
-
-    BREAK_ON_NULL(netio_ctx->callbacks.on_new_stream);
-
-    netio_ctx->callbacks.on_new_stream(&conn->peer, &ctx, conn->pn);
+    sscrypto_on_new_stream(&conn->peer, &ctx, conn->pn);
     conn->pn->ctx = ctx;
-
-BREAK_LABEL:
-
-    return;
 }
 
 void ssnetio_on_stream_teardown(PROXY_NODE *pn) {
-
-    BREAK_ON_NULL(netio_ctx->callbacks.on_stream_teardown);
-
-    netio_ctx->callbacks.on_stream_teardown(pn->ctx);
-
-BREAK_LABEL:
-
-    return;
+    sscrypto_on_stream_teardown(pn->ctx);
 }
 
 void ssnetio_on_new_dgram(ADDRESS *local, ADDRESS *remote, void **ctx) {
     ADDRESS_PAIR pair;
 
-    BREAK_ON_NULL(netio_ctx->callbacks.on_new_dgram);
-
     pair.local = local;
     pair.remote = remote;
 
-    netio_ctx->callbacks.on_new_dgram(&pair, ctx);
-
-BREAK_LABEL:
-
-    return;
+    sscrypto_on_new_dgram(&pair, ctx);
 }
 
 void ssnetio_on_dgram_teardown(void *ctx) {
-
-    BREAK_ON_NULL(netio_ctx->callbacks.on_dgram_teardown);
-
-    netio_ctx->callbacks.on_dgram_teardown(ctx);
-
-BREAK_LABEL:
-
-    return;
+    sscrypto_on_dgram_teardown(ctx);
 }
 
 int ssnetio_on_stream_encrypt(CONN *conn, int offset) {
@@ -139,8 +104,7 @@ int ssnetio_on_stream_encrypt(CONN *conn, int offset) {
 
     conn->ss_buf.data_base = conn->ss_buf.buf_base + offset;
     conn->ss_buf.data_len = (size_t)conn->result - offset;
-    ret = netio_ctx->callbacks.on_stream_encrypt(
-        &mr, conn->pn->ctx);
+    ret = sscrypto_on_stream_encrypt(&mr, conn->pn->ctx);
 
     conn->ss_buf.data_base = mr.data_base;
     conn->ss_buf.data_len = mr.data_len;
@@ -159,8 +123,7 @@ int ssnetio_on_stream_decrypt(CONN *conn, int offset) {
 
     conn->ss_buf.data_base = conn->ss_buf.buf_base + offset;
     conn->ss_buf.data_len = (size_t)conn->result - offset;
-    ret = netio_ctx->callbacks.on_stream_decrypt(
-        &mr, conn->pn->ctx);
+    ret = sscrypto_on_stream_decrypt(&mr, conn->pn->ctx);
 
     conn->ss_buf.data_base = mr.data_base;
     conn->ss_buf.data_len = mr.data_len;
@@ -177,7 +140,7 @@ int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, int offset) {
     mr.data_base = mr.buf_base + offset;
     mr.data_len = buf->data_len - offset;
 
-    ret = netio_ctx->callbacks.on_dgram_encrypt(&mr);
+    ret = sscrypto_on_dgram_encrypt(&mr);
 
     buf->data_base = mr.data_base;
     buf->data_len = mr.data_len;
@@ -194,7 +157,7 @@ int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, int offset) {
     mr.data_base = mr.buf_base + offset;
     mr.data_len = buf->data_len - offset;
 
-    ret = netio_ctx->callbacks.on_dgram_decrypt(&mr);
+    ret = sscrypto_on_dgram_decrypt(&mr);
 
     buf->data_base = mr.data_base;
     buf->data_len = mr.data_len;
@@ -203,23 +166,19 @@ int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, int offset) {
 }
 
 int ssnetio_on_plain_stream(CONN *conn) {
-    int action = PASS;
+    int action;
     int direct = conn == &conn->pn->incoming ? STREAM_UP : STREAM_DOWN;
     MEM_RANGE mr;
-
-    BREAK_ON_NULL(netio_ctx->callbacks.on_plain_stream);
 
     mr.buf_base = conn->ss_buf.buf_base;
     mr.buf_len = conn->ss_buf.buf_len;
     mr.data_base = conn->ss_buf.data_base;
     mr.data_len = conn->ss_buf.data_len;
 
-    action = netio_ctx->callbacks.on_plain_stream(
+    action = sscrypto_on_plain_stream(
         &mr,
         direct,
         conn->pn->ctx);
-
-BREAK_LABEL:
 
     return action;
 }
@@ -227,21 +186,15 @@ BREAK_LABEL:
 void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
     MEM_RANGE mr;
 
-    BREAK_ON_NULL(netio_ctx->callbacks.on_plain_dgram);
-
     mr.buf_base = buf->buf_base;
     mr.buf_len = buf->buf_len;
     mr.data_base = buf->data_base;
     mr.data_len = buf->data_len;
 
-    netio_ctx->callbacks.on_plain_dgram(
+    sscrypto_on_plain_dgram(
         &mr,
         direct,
         ctx);
-
-BREAK_LABEL:
-
-    return;
 }
 
 
@@ -262,8 +215,7 @@ int ssnetio_write_stream_out(
     conn = STREAM_UP == direct ? &pn->outgoing : &pn->incoming;
 
     if ( STREAM_DOWN == direct ) {
-        ret = netio_ctx->callbacks.on_stream_encrypt(
-            buf, conn->pn->ctx);
+        ret = sscrypto_on_stream_encrypt(buf, conn->pn->ctx);
         ASSERT(0 == ret);
     }
 

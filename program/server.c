@@ -42,6 +42,12 @@ void on_msg(int level, const char *msg) {
 int main() {
     SSCRYPTO_CTX ctx = { 0 };
     ctx.config.as_server = 1;
+    ctx.config.bind_host = "127.0.0.1";
+    ctx.config.bind_port = 14450;
+    ctx.config.password = "123qwe";
+    ctx.config.method = "AES-256-CFB";
+    ctx.config.idel_timeout = 60 * 1000;
+
     ctx.callbacks.on_stream_connection_made = on_stream_connection_made;
     ctx.callbacks.on_bind = on_bind;
     ctx.callbacks.on_msg = on_msg;

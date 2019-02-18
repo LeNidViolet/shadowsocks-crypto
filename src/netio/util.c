@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 #include <netinet/in.h>
-#include "shadowsocks-netio/shadowsocks-netio.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 #include "s5.h"
 

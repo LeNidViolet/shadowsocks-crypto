@@ -22,8 +22,9 @@
  */
 #include <stdlib.h>
 #include <memory.h>
+#include "mbedtls/platform.h"
 #include "mbedtls/cipher.h"
-#include "shadowsocks-netio/shadowsocks-netio.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
 static unsigned int ssn_outstanding = 0;
@@ -79,32 +80,32 @@ void free_callback_unit(void) {
 
 
 void sscrypto_on_msg(int level, const char *msg) {
-    if ( CryptoEnv.ori_cbs.on_msg ) {
-        CryptoEnv.ori_cbs.on_msg(level, msg);
+    if ( CryptoEnv.callbacks.on_msg ) {
+        CryptoEnv.callbacks.on_msg(level, msg);
     }
 }
 
 void sscrypto_on_bind(const char *host, unsigned short port) {
-    if ( CryptoEnv.ori_cbs.on_bind ) {
-        CryptoEnv.ori_cbs.on_bind(host, port);
+    if ( CryptoEnv.callbacks.on_bind ) {
+        CryptoEnv.callbacks.on_bind(host, port);
     }
 }
 
 void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
     STREAM_SESSION_CRYP *ss;
 
-    if ( CryptoEnv.ori_cbs.on_stream_connection_made ) {
+    if ( CryptoEnv.callbacks.on_stream_connection_made ) {
         ss = (STREAM_SESSION_CRYP *)ctx;
         CHECK(ss);
 
-        CryptoEnv.ori_cbs.on_stream_connection_made(addr, ss->ctx);
+        CryptoEnv.callbacks.on_stream_connection_made(addr, ss->ctx);
     }
 }
 
 void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     STREAM_SESSION_CRYP *ss;
 
-    ENSURE((ss = malloc(sizeof(*ss))) != NULL);
+    ENSURE((ss = mbedtls_calloc(1, sizeof(*ss))) != NULL);
     memset(ss, 0, sizeof(*ss));
 
     init_cipher(&ss->encrypt_ctx, MBEDTLS_ENCRYPT);
@@ -113,8 +114,8 @@ void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     ss->first_decrypt = 1;
 
     *ctx = ss;
-    if ( CryptoEnv.ori_cbs.on_new_stream ) {
-        CryptoEnv.ori_cbs.on_new_stream(addr, &ss->ctx, stream_id);
+    if ( CryptoEnv.callbacks.on_new_stream ) {
+        CryptoEnv.callbacks.on_new_stream(addr, &ss->ctx, stream_id);
     }
 
     ssn_outstanding++;
@@ -125,8 +126,8 @@ void sscrypto_on_stream_teardown(void *ctx) {
     ss = (STREAM_SESSION_CRYP *)ctx;
     CHECK(ss);
 
-    if ( CryptoEnv.ori_cbs.on_stream_teardown ) {
-        CryptoEnv.ori_cbs.on_stream_teardown(ss->ctx);
+    if ( CryptoEnv.callbacks.on_stream_teardown ) {
+        CryptoEnv.callbacks.on_stream_teardown(ss->ctx);
     }
 
     mbedtls_cipher_free(&ss->encrypt_ctx);
@@ -135,7 +136,7 @@ void sscrypto_on_stream_teardown(void *ctx) {
     if ( DEBUG_CHECKS )
         memset(ss, -1, sizeof(*ss));
 
-    free(ss);
+    mbedtls_free(ss);
 
     ssn_outstanding--;
 }
@@ -143,12 +144,12 @@ void sscrypto_on_stream_teardown(void *ctx) {
 void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
     DGRAM_SESSION_CRYP *ds;
 
-    ENSURE((ds = malloc(sizeof(*ds))) != NULL);
+    ENSURE((ds = mbedtls_calloc(1, sizeof(*ds))) != NULL);
     memset(ds, 0, sizeof(*ds));
 
     *ctx = ds;
-    if ( CryptoEnv.ori_cbs.on_new_dgram ) {
-        CryptoEnv.ori_cbs.on_new_dgram(addr, &ds->ctx);
+    if ( CryptoEnv.callbacks.on_new_dgram ) {
+        CryptoEnv.callbacks.on_new_dgram(addr, &ds->ctx);
     }
 
     dsn_outstanding++;
@@ -159,14 +160,14 @@ void sscrypto_on_dgram_teardown(void *ctx) {
     ds = (DGRAM_SESSION_CRYP *)ctx;
     CHECK(ds);
 
-    if ( CryptoEnv.ori_cbs.on_dgram_teardown ) {
-        CryptoEnv.ori_cbs.on_dgram_teardown(ds->ctx);
+    if ( CryptoEnv.callbacks.on_dgram_teardown ) {
+        CryptoEnv.callbacks.on_dgram_teardown(ds->ctx);
     }
 
     if ( DEBUG_CHECKS )
         memset(ds, -1, sizeof(*ds));
 
-    free(ds);
+    mbedtls_free(ds);
 
     dsn_outstanding--;
 }
@@ -175,11 +176,11 @@ int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
     STREAM_SESSION_CRYP *ss;
     int action = PASS;
 
-    if ( CryptoEnv.ori_cbs.on_plain_stream ) {
+    if ( CryptoEnv.callbacks.on_plain_stream ) {
         ss = (STREAM_SESSION_CRYP *)ctx;
         CHECK(ss);
 
-        action = CryptoEnv.ori_cbs.on_plain_stream(buf, direct, ss->ctx);
+        action = CryptoEnv.callbacks.on_plain_stream(buf, direct, ss->ctx);
     }
 
     return action;
@@ -188,11 +189,11 @@ int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
 void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
     DGRAM_SESSION_CRYP *ds;
 
-    if ( CryptoEnv.ori_cbs.on_plain_dgram ) {
+    if ( CryptoEnv.callbacks.on_plain_dgram ) {
         ds = (DGRAM_SESSION_CRYP *)ctx;
         CHECK(ds);
 
-        CryptoEnv.ori_cbs.on_plain_dgram(buf, direct, ds->ctx);
+        CryptoEnv.callbacks.on_plain_dgram(buf, direct, ds->ctx);
     }
 }
 
@@ -349,7 +350,6 @@ int sscrypto_on_dgram_encrypt(MEM_RANGE *buf) {
     CHECK(buf->data_len == encrypt_len);
 
     encrypt_len += iv_len;
-
     memcpy(buf->buf_base, crypto_space, encrypt_len);
     buf->data_base = buf->buf_base;
     buf->data_len = encrypt_len;

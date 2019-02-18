@@ -25,7 +25,7 @@
 
 #include "uv.h"
 #include "list.h"
-#include "shadowsocks-netio/shadowsocks-netio.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
 

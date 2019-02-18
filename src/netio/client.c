@@ -22,7 +22,7 @@
  */
 
 #include <stdlib.h>
-#include "shadowsocks-netio/shadowsocks-netio.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 #include "dgramsc.h"
 #include "dnsc.h"
@@ -70,26 +70,15 @@ int ssnetio_client_launch(SSNETIO_CTX *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
-    BREAK_ON_NULL(ctx->callbacks.on_stream_decrypt);
-    BREAK_ON_NULL(ctx->callbacks.on_stream_decrypt);
-    BREAK_ON_NULL(ctx->callbacks.on_dgram_encrypt);
-    BREAK_ON_NULL(ctx->callbacks.on_dgram_decrypt);
+    BREAK_ON_NULL(ctx->config.bind_host);
+    BREAK_ON_NULL(ctx->config.bind_port);
+    BREAK_ON_NULL(ctx->config.idel_timeout);
+    BREAK_ON_NULL(ctx->config.ss_srv_addr);
+    BREAK_ON_NULL(ctx->config.ss_srv_port);
 
     runas(client_side);
 
     memcpy(&clt_ctx, ctx, sizeof(clt_ctx));
-    if ( !clt_ctx.config.bind_host )
-        clt_ctx.config.bind_host = DEFAULT_SS_CLIENT_BIND_HOST;
-    if ( !clt_ctx.config.bind_port )
-        clt_ctx.config.bind_port = DEFAULT_SS_CLIENT_BIND_PORT;
-    if ( !clt_ctx.config.idel_timeout )
-        clt_ctx.config.idel_timeout = DEFAULT_SS_CLIENT_IDEL_TIMEOUT;
-    if ( !clt_ctx.config.ss_srv_addr )
-        clt_ctx.config.ss_srv_addr = DEFAULT_SS_SERVER_BIND_HOST;
-    if ( !clt_ctx.config.ss_srv_port )
-        clt_ctx.config.ss_srv_port = DEFAULT_SS_SERVER_BIND_PORT;
-    clt_ctx.callbacks.on_plain_stream = NULL;
-    clt_ctx.callbacks.on_plain_dgram = NULL;
 
     ret = client_run(&clt_ctx);
 

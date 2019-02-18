@@ -21,22 +21,22 @@
  * IN THE SOFTWARE.
  */
 #include <stdlib.h>
-#include "shadowsocks-netio/shadowsocks-netio.h"
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
 CRYPTO_ENV CryptoEnv = { 0 };
+
+int ssnetio_server_launch(SSNETIO_CTX *ctx);
+int ssnetio_client_launch(SSNETIO_CTX *ctx);
+void ssnetio_server_port(IOCTL_PORT *port);
 
 int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     int ret = -1;
     SSNETIO_CTX netioctx = { 0 };
 
     BREAK_ON_NULL(ctx);
-
-    if ( !ctx->config.method )
-        ctx->config.method = DEFAULT_METHOD;
-    if ( !ctx->config.password )
-        ctx->config.password = DEFAULT_PASSWORD;
+    BREAK_ON_NULL(ctx->config.method);
+    BREAK_ON_NULL(ctx->config.password);
 
     CryptoEnv.method = get_method_by_name(ctx->config.method);
     BREAK_ON_NULL(CryptoEnv.method);
@@ -49,22 +49,8 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     netioctx.config.ss_srv_port     = ctx->config.ss_srv_port;
     netioctx.config.idel_timeout    = ctx->config.idel_timeout;
 
-    netioctx.callbacks.on_msg                       = sscrypto_on_msg;
-    netioctx.callbacks.on_bind                      = sscrypto_on_bind;
-    netioctx.callbacks.on_stream_connection_made    = sscrypto_on_stream_connection_made;
-    netioctx.callbacks.on_new_stream                = sscrypto_on_new_stream;
-    netioctx.callbacks.on_stream_teardown           = sscrypto_on_stream_teardown;
-    netioctx.callbacks.on_new_dgram                 = sscrypto_on_new_dgram;
-    netioctx.callbacks.on_dgram_teardown            = sscrypto_on_dgram_teardown;
-    netioctx.callbacks.on_stream_encrypt            = sscrypto_on_stream_encrypt;
-    netioctx.callbacks.on_stream_decrypt            = sscrypto_on_stream_decrypt;
-    netioctx.callbacks.on_dgram_encrypt             = sscrypto_on_dgram_encrypt;
-    netioctx.callbacks.on_dgram_decrypt             = sscrypto_on_dgram_decrypt;
-    netioctx.callbacks.on_plain_stream              = sscrypto_on_plain_stream;
-    netioctx.callbacks.on_plain_dgram               = sscrypto_on_plain_dgram;
-
     /* Save caller's callbacks */
-    CryptoEnv.ori_cbs = ctx->callbacks;
+    CryptoEnv.callbacks = ctx->callbacks;
 
     init_calback_unit();
 
@@ -79,4 +65,8 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
 BREAK_LABEL:
 
     return ret;
+}
+
+void sscrypto_server_port(IOCTL_PORT *port) {
+    ssnetio_server_port(port);
 }
