@@ -16,12 +16,18 @@ ELSE()
     ADD_SUBDIRECTORY(${MBEDTLS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/mbedtls)
 ENDIF()
 
-# SHADOWSOCKSNETIO DIR
-SET(SHADOWSOCKSNETIO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shadowsocks-netio)
+# LIBUV DIR
+IF( DEFINED LIBUV_DIR )
+    MESSAGE(STATUS "EXISTING LIBUV DIR: " ${LIBUV_DIR})
+ELSE()
+    SET(LIBUV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libuv)
+    # ADD LIBUV PROJECT
+    ADD_SUBDIRECTORY(${LIBUV_DIR} ${CMAKE_CURRENT_BINARY_DIR}/libuv)
+ENDIF()
 
 SET(SHADOWSOCKSCRYPTO_ADDTION_HDR
         ${MBEDTLS_DIR}/include
-        ${SHADOWSOCKSNETIO_DIR}/include
+        ${LIBUV_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
 
@@ -32,13 +38,24 @@ IF( ENABLE_PROGRAMS )
     ADD_SUBDIRECTORY(${CMAKE_CURRENT_SOURCE_DIR}/program ${CMAKE_CURRENT_BINARY_DIR}/program)
 ENDIF()
 
-# ADD SHADOWSOCKSNETIO PROJECT
-ADD_SUBDIRECTORY(${SHADOWSOCKSNETIO_DIR} ${CMAKE_CURRENT_BINARY_DIR}/shadowsocks-netio)
+SET(SHADOWSOCKSNETIO_SRC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/server.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/client.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/util.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/flow.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/list.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dgramsc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dnsc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/s5.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/handler.c
+        )
 
 SET(SHADOWSOCKSCRYPTO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/launch.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/callback.c
+
+        ${SHADOWSOCKSNETIO_SRC}
         )
 
 IF( ENABLE_SHAREDLIB )
@@ -46,5 +63,5 @@ IF( ENABLE_SHAREDLIB )
 ELSE()
     ADD_LIBRARY(shadowsocks-crypto STATIC ${SHADOWSOCKSCRYPTO_SRC})
 ENDIF()
-TARGET_LINK_LIBRARIES(shadowsocks-crypto shadowsocks-netio)
 TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls)
+TARGET_LINK_LIBRARIES(shadowsocks-crypto uv_a)
