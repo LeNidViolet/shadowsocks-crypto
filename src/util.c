@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
+#include "mbedtls/platform.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/md5.h"
@@ -59,7 +60,7 @@ int gen_key(const char *seed, unsigned char *key, size_t key_len) {
 
     seed_len = strlen(seed);
     buf_len = seed_len + sizeof(digest);
-    buf = malloc(buf_len);
+    buf = mbedtls_calloc(1, buf_len);
     BREAK_ON_NULL(buf);
 
     rm_len = key_len;
@@ -89,7 +90,7 @@ int gen_key(const char *seed, unsigned char *key, size_t key_len) {
 BREAK_LABEL:
 
     if ( buf )
-        free(buf);
+        mbedtls_free(buf);
 
     return ret;
 }

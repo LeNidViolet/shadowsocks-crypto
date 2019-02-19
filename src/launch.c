@@ -54,6 +54,7 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
 
     init_calback_unit();
 
+    /* 启动SS NETIO, 开始监听 */
     if ( 0 == ctx->config.as_server ) {
         ret = ssnetio_client_launch(&netioctx);
     } else {

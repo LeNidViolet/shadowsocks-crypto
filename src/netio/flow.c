@@ -47,11 +47,10 @@ void runas(int mode) {
 }
 
 void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
-    char addrbuf[INET6_ADDRSTRLEN + 1];
+    ADDRESS address = {0};
     unsigned int naddrs;
     unsigned short port;
     struct addrinfo *ai;
-    const void *addrv = NULL;
     uv_loop_t *loop;
     int ret = -1;
     union {
@@ -88,22 +87,16 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         if ( AF_INET == ai->ai_family ) {
             s.addr4 = *(const struct sockaddr_in *)ai->ai_addr;
             s.addr4.sin_port = htons_u(port);
-            addrv = &s.addr4.sin_addr;
         }
         else if ( AF_INET6 == ai->ai_family ) {
             s.addr6 = *(const struct sockaddr_in6 *)ai->ai_addr;
             s.addr6.sin6_port = htons_u(port);
-            addrv = &s.addr6.sin6_addr;
         }
         else {
             UNREACHABLE();
         }
 
-        CHECK(0 == uv_inet_ntop(
-            s.addr.sa_family,
-            addrv,
-            addrbuf,
-            sizeof(addrbuf)));
+        CHECK(0 == str_sockaddr(&s.addr, &address));
 
         /* tcp bind */
         ENSURE((tcp_handle = malloc(sizeof(*tcp_handle))) != NULL);
@@ -114,8 +107,8 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
             ssnetio_on_msg(
                 1,
                 "tcp bind to %s:%d failed: %s",
-                addrbuf,
-                port,
+                address.host,
+                address.port,
                 uv_strerror(ret));
             BREAK_NOW;
         }
@@ -125,8 +118,8 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
             ssnetio_on_msg(
                 1,
                 "tcp listen to %s:%d failed: %s",
-                addrbuf,
-                port,
+                address.host,
+                address.port,
                 uv_strerror(ret));
             BREAK_NOW;
         }
@@ -148,15 +141,15 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
                 ssnetio_on_msg(
                     1,
                     "udp bind to %s:%d failed: %s",
-                    addrbuf,
-                    port,
+                    address.host,
+                    address.port,
                     uv_strerror(ret));
                 BREAK_NOW;
             }
             CHECK(0 == dgram_read_local(udp_handle));
         }
 
-        ssnetio_on_bind(addrbuf, port);
+        ssnetio_on_bind(address.host, address.port);
     }
 
 BREAK_LABEL:
@@ -481,12 +474,12 @@ int do_proxy(CONN *sender) {
         }
     }
 
-    if ( conn_cycle("client", incoming, outgoing)) {
+    if ( 0 != conn_cycle("client", incoming, outgoing) ) {
         new_state = do_kill(incoming->pn);
         BREAK_NOW;
     }
 
-    if ( conn_cycle("upstream", outgoing, incoming)) {
+    if ( 0 != conn_cycle("upstream", outgoing, incoming) ) {
         new_state = do_kill(incoming->pn);
         BREAK_NOW;
     }
@@ -530,7 +523,6 @@ int do_almost_dead(PROXY_NODE *pn) {
 }
 
 int do_clear(PROXY_NODE *pn) {
-
     ssnetio_on_stream_teardown(pn);
 
     if ( DEBUG_CHECKS ) {
@@ -571,7 +563,6 @@ static void loop_walk_cb(uv_handle_t* handle, void* arg) {
 
     type = uv_handle_get_type(handle);
     if ( UV_TCP == type ) {
-
         uv_close(handle, loop_walk_close_done);
     } else if ( UV_UDP == type ) {
         ss_buf = uv_handle_get_data(handle);

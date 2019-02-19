@@ -134,6 +134,7 @@ static void get_ss_srv_addr_done(
         BREAK_NOW;
     }
 
+    /* 获取SS服务器地址,端口 */
     if ( addrs->ai_family == AF_INET ) {
         ss_srv.addr4 = *(const struct sockaddr_in *)addrs->ai_addr;
         ss_srv.addr4.sin_port = htons_u(clt_ctx.config.ss_srv_port);
@@ -273,8 +274,6 @@ static int do_handshake(PROXY_NODE *pn) {
     incoming = &pn->incoming;
 
     if ( incoming->result < 0 ) {
-        ssnetio_on_msg(1, "%4d Handshake Read Error: %s",
-                       pn->index, uv_strerror((int)incoming->result));
         new_state = do_kill(pn);
         BREAK_NOW;
     }

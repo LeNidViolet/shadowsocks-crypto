@@ -197,7 +197,7 @@ void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
         ctx);
 }
 
-
+/* SERVER SIDE ONLY */
 int ssnetio_write_stream_out(
     MEM_RANGE *buf, int direct, void *stream_id,
     write_stream_out_callback callback, void *param) {
@@ -217,6 +217,7 @@ int ssnetio_write_stream_out(
     if ( STREAM_DOWN == direct ) {
         ret = sscrypto_on_stream_encrypt(buf, conn->pn->ctx);
         ASSERT(0 == ret);
+        ret = -2;
     }
 
     ASSERT(c_stop == conn->wrstate || c_done == conn->wrstate);
@@ -224,8 +225,7 @@ int ssnetio_write_stream_out(
 
     buf_t = uv_buf_init(buf->data_base, (unsigned int)buf->data_len);
 
-    snd_ctx = malloc(sizeof(*snd_ctx));
-    CHECK(snd_ctx);
+    ENSURE((snd_ctx = malloc(sizeof(*snd_ctx))) != NULL);
     snd_ctx->callback = callback;
     snd_ctx->param = param;
     uv_req_set_data((uv_req_t*)&conn->write_req, snd_ctx);
