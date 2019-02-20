@@ -1,6 +1,6 @@
 /**
  *  Copyright 2018, raprepo.
- *  Created by raprepo on 2018/8/7.
+ *  Created by raprepo on 2018/9/5.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,28 +20,27 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef SHADOWSOCKS_NETIO_DNSC_H
-#define SHADOWSOCKS_NETIO_DNSC_H
+#include "tls-flat/tls-flat.h"
+#include "internal.h"
 
-#include <netinet/in.h>
-#include "shadowsocks-crypto/list.h"
+IOCTL_PORT Ioctl = {0};
 
-typedef struct {
-    LIST_ENTRY list;
+int tlsflat_init(IOCTL_PORT *port) {
+    int ret = -1;
 
-    char host[256];
+    BREAK_ON_NULL(port);
+    Ioctl = *port;
 
-    union{
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    }t;
-} DNSC;
+    ret = tls_init();
+    BREAK_ON_FAILURE(ret);
+    ret = crt_pool_init();
+    BREAK_ON_FAILURE(ret);
 
-int dnsc_init(void);
-DNSC *dnsc_find(char *host);
-DNSC *dnsc_add(char *host, struct sockaddr *addr);
-void dnsc_remove(DNSC *dnsc);
-void dnsc_clear(void);
+BREAK_LABEL:
+    return ret;
+}
 
-#endif //SHADOWSOCKS_NETIO_DNSC_H
+void tlsflat_clear(void) {
+    crt_pool_clear();
+    tls_clear();
+}

@@ -22,6 +22,7 @@
  */
 #include <stdlib.h>
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
+#include "tls-flat/tls-flat.h"
 #include "internal.h"
 
 CRYPTO_ENV CryptoEnv = { 0 };
@@ -32,7 +33,8 @@ void ssnetio_server_port(IOCTL_PORT *port);
 
 int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     int ret = -1;
-    SSNETIO_CTX netioctx = { 0 };
+    SSNETIO_CTX netio_ctx = { 0 };
+    IOCTL_PORT io_port;
 
     BREAK_ON_NULL(ctx);
     BREAK_ON_NULL(ctx->config.method);
@@ -43,31 +45,43 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
 
     CHECK(0 == gen_key(ctx->config.password, CryptoEnv.key, CryptoEnv.method->key_len));
 
-    netioctx.config.bind_host       = ctx->config.bind_host;
-    netioctx.config.bind_port       = ctx->config.bind_port;
-    netioctx.config.ss_srv_addr     = ctx->config.ss_srv_addr;
-    netioctx.config.ss_srv_port     = ctx->config.ss_srv_port;
-    netioctx.config.idel_timeout    = ctx->config.idel_timeout;
+    netio_ctx.config.bind_host       = ctx->config.bind_host;
+    netio_ctx.config.bind_port       = ctx->config.bind_port;
+    netio_ctx.config.ss_srv_addr     = ctx->config.ss_srv_addr;
+    netio_ctx.config.ss_srv_port     = ctx->config.ss_srv_port;
+    netio_ctx.config.idel_timeout    = ctx->config.idel_timeout;
 
     /* Save caller's callbacks */
     CryptoEnv.callbacks = ctx->callbacks;
 
-    init_calback_unit();
+
+    /* 初始化 TLS 部分 */
+    ssnetio_server_port(&io_port);
+    ret = tlsflat_init(&io_port);
+    if ( 0 != ret ) {
+        sscrypto_on_msg(1, "Tlsflat init Failed");
+        BREAK_NOW;
+    }
+
+    /* 初始化加密解密单元 */
+    init_crypt_unit();
 
     /* 启动SS NETIO, 开始监听 */
     if ( 0 == ctx->config.as_server ) {
-        ret = ssnetio_client_launch(&netioctx);
+        ret = ssnetio_client_launch(&netio_ctx);
     } else {
-        ret = ssnetio_server_launch(&netioctx);
+        ret = ssnetio_server_launch(&netio_ctx);
     }
 
-    free_callback_unit();
+    /* 释放加密解密单元资源 */
+    free_crypt_unit();
+
+    /* 释放 TLS 资源 */
+    tlsflat_clear();
+
+    sscrypto_on_msg(3, "Program Exiting");
 
 BREAK_LABEL:
 
     return ret;
-}
-
-void sscrypto_server_port(IOCTL_PORT *port) {
-    ssnetio_server_port(port);
 }

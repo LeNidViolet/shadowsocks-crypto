@@ -93,8 +93,8 @@ const CRYPTO_INFO *get_method_by_type(mbedtls_cipher_type_t type);
 
 
 /* CALLBACK.C */
-int init_calback_unit(void);
-void free_callback_unit(void);
+int init_crypt_unit(void);
+void free_crypt_unit(void);
 void sscrypto_on_msg(int level, const char *msg);
 void sscrypto_on_bind(const char *host, unsigned short port);
 void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);

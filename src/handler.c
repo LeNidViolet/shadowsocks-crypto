@@ -25,6 +25,7 @@
 #include "mbedtls/platform.h"
 #include "mbedtls/cipher.h"
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
+#include "tls-flat/tls-flat.h"
 #include "internal.h"
 
 static unsigned int ssn_outstanding = 0;
@@ -42,12 +43,15 @@ typedef struct {
     int first_encrypt;
     int first_decrypt;
 
-    void *ctx;
+    int index;
+
+    int is_tls;
+    void *tls_ctx;
+    void *stream_id;
 } STREAM_SESSION_CRYP;
 
 typedef struct {
-
-    void *ctx;
+    int index;
 } DGRAM_SESSION_CRYP;
 
 
@@ -66,14 +70,14 @@ static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
 }
 
 
-int init_calback_unit(void) {
+int init_crypt_unit(void) {
     init_cipher(&encrypt_dgram_ctx, MBEDTLS_ENCRYPT);
     init_cipher(&decrypt_dgram_ctx, MBEDTLS_DECRYPT);
 
     return 0;
 }
 
-void free_callback_unit(void) {
+void free_crypt_unit(void) {
     mbedtls_cipher_free(&encrypt_dgram_ctx);
     mbedtls_cipher_free(&decrypt_dgram_ctx);
 }
@@ -94,16 +98,24 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
 void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
     STREAM_SESSION_CRYP *ss;
 
-    if ( CryptoEnv.callbacks.on_stream_connection_made ) {
-        ss = (STREAM_SESSION_CRYP *)ctx;
-        CHECK(ss);
+    ss = (STREAM_SESSION_CRYP *)ctx;
+    CHECK(ss);
 
-        CryptoEnv.callbacks.on_stream_connection_made(addr, ss->ctx);
+    if ( 443 == addr->remote->port ) {
+        ss->is_tls = 1;
+        tlsflat_on_stream_connection_made(addr, ss->stream_id, ss, &ss->tls_ctx);
+    }
+
+    if ( CryptoEnv.callbacks.on_stream_connection_made ) {
+        CryptoEnv.callbacks.on_stream_connection_made(addr, ss->index);
     }
 }
 
 void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
+    static int stream_index = 0;
     STREAM_SESSION_CRYP *ss;
+
+    (void)addr;
 
     ENSURE((ss = mbedtls_calloc(1, sizeof(*ss))) != NULL);
     memset(ss, 0, sizeof(*ss));
@@ -112,11 +124,11 @@ void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     init_cipher(&ss->decrypt_ctx, MBEDTLS_DECRYPT);
     ss->first_encrypt = 1;
     ss->first_decrypt = 1;
+    ss->is_tls = 0;
+    ss->stream_id = stream_id;
+    ss->index = stream_index++;
 
     *ctx = ss;
-    if ( CryptoEnv.callbacks.on_new_stream ) {
-        CryptoEnv.callbacks.on_new_stream(addr, &ss->ctx, stream_id);
-    }
 
     ssn_outstanding++;
 }
@@ -126,8 +138,12 @@ void sscrypto_on_stream_teardown(void *ctx) {
     ss = (STREAM_SESSION_CRYP *)ctx;
     CHECK(ss);
 
+    if ( ss->is_tls ) {
+        tlsflat_on_stream_teardown(ss->tls_ctx);
+    }
+
     if ( CryptoEnv.callbacks.on_stream_teardown ) {
-        CryptoEnv.callbacks.on_stream_teardown(ss->ctx);
+        CryptoEnv.callbacks.on_stream_teardown(ss->index);
     }
 
     mbedtls_cipher_free(&ss->encrypt_ctx);
@@ -142,14 +158,17 @@ void sscrypto_on_stream_teardown(void *ctx) {
 }
 
 void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
+    static int dgram_index = 0;
     DGRAM_SESSION_CRYP *ds;
 
     ENSURE((ds = mbedtls_calloc(1, sizeof(*ds))) != NULL);
     memset(ds, 0, sizeof(*ds));
 
+    ds->index = dgram_index++;
+
     *ctx = ds;
     if ( CryptoEnv.callbacks.on_new_dgram ) {
-        CryptoEnv.callbacks.on_new_dgram(addr, &ds->ctx);
+        CryptoEnv.callbacks.on_new_dgram(addr, ds->index);
     }
 
     dsn_outstanding++;
@@ -161,7 +180,7 @@ void sscrypto_on_dgram_teardown(void *ctx) {
     CHECK(ds);
 
     if ( CryptoEnv.callbacks.on_dgram_teardown ) {
-        CryptoEnv.callbacks.on_dgram_teardown(ds->ctx);
+        CryptoEnv.callbacks.on_dgram_teardown(ds->index);
     }
 
     if ( DEBUG_CHECKS )
@@ -176,24 +195,42 @@ int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
     STREAM_SESSION_CRYP *ss;
     int action = PASS;
 
-    if ( CryptoEnv.callbacks.on_plain_stream ) {
-        ss = (STREAM_SESSION_CRYP *)ctx;
-        CHECK(ss);
+    ss = (STREAM_SESSION_CRYP *)ctx;
+    CHECK(ss);
 
-        action = CryptoEnv.callbacks.on_plain_stream(buf, direct, ss->ctx);
+    /* 如果是 TLS 数据流, 等待 TLS 解密的回调中再向上通报数据 (sscrypto_tls_on_plain_stream) */
+    if ( ss->is_tls ) {
+        action = tlsflat_on_plain_stream(buf, direct, ss->tls_ctx);
+        BREAK_NOW;
     }
 
+    if ( CryptoEnv.callbacks.on_plain_stream ) {
+        action = CryptoEnv.callbacks.on_plain_stream(buf->data_base, buf->data_len, direct, ss->index);
+    }
+
+BREAK_LABEL:
+
     return action;
+}
+
+void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct, void *ss_ctx) {
+    STREAM_SESSION_CRYP *ss;
+
+    ss = (STREAM_SESSION_CRYP *)ss_ctx;
+
+    if ( CryptoEnv.callbacks.on_plain_stream ) {
+        CryptoEnv.callbacks.on_plain_stream(data, data_len, direct, ss->index);
+    }
 }
 
 void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
     DGRAM_SESSION_CRYP *ds;
 
-    if ( CryptoEnv.callbacks.on_plain_dgram ) {
-        ds = (DGRAM_SESSION_CRYP *)ctx;
-        CHECK(ds);
+    ds = (DGRAM_SESSION_CRYP *)ctx;
+    CHECK(ds);
 
-        CryptoEnv.callbacks.on_plain_dgram(buf, direct, ds->ctx);
+    if ( CryptoEnv.callbacks.on_plain_dgram ) {
+        CryptoEnv.callbacks.on_plain_dgram(buf->data_base, buf->data_len, direct, ds->index);
     }
 }
 

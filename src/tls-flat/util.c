@@ -1,6 +1,6 @@
 /**
  *  Copyright 2018, raprepo.
- *  Created by raprepo on 2018/8/7.
+ *  Created by raprepo on 2018/8/28.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,28 +20,40 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef SHADOWSOCKS_NETIO_DNSC_H
-#define SHADOWSOCKS_NETIO_DNSC_H
+#include <stdlib.h>
+#include <string.h>
+#include "internal.h"
 
-#include <netinet/in.h>
-#include "shadowsocks-crypto/list.h"
+void mem_range_alloc(MEM_RANGE *mr, size_t size) {
+    mr->buf_base = mr->data_base = malloc(size);
+    ASSERT(mr->buf_base);
+    mr->buf_len = size;
+    mr->data_len = 0;
+}
 
-typedef struct {
-    LIST_ENTRY list;
+void mem_range_free(MEM_RANGE *mr) {
+    if ( mr->buf_base ) {
+        free(mr->buf_base);
+    }
+    mr->buf_base = mr->data_base = NULL;
+    mr->buf_len = mr->data_len = 0;
+}
 
-    char host[256];
+void mem_range_relloc(MEM_RANGE *mr, size_t size) {
+    char *tmp;
 
-    union{
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    }t;
-} DNSC;
+    if ( !mr->buf_base ) {
+        mem_range_alloc(mr, size);
+    } else if ( mr->buf_len < size ) {
+        tmp = malloc(size);
+        ASSERT(tmp);
 
-int dnsc_init(void);
-DNSC *dnsc_find(char *host);
-DNSC *dnsc_add(char *host, struct sockaddr *addr);
-void dnsc_remove(DNSC *dnsc);
-void dnsc_clear(void);
-
-#endif //SHADOWSOCKS_NETIO_DNSC_H
+        if ( mr->data_base && mr->data_len ) {
+            memcpy(tmp, mr->data_base, mr->data_len);
+        }
+        free(mr->buf_base);
+        mr->buf_base = mr->data_base = tmp;
+        mr->buf_len = size;
+        /* No change for mr->data_len */
+    }
+}

@@ -108,23 +108,18 @@ typedef struct SSCRYPTO_BASE_CONFIG{
 typedef struct SSCRYPTO_CALLBACKS{
     void (*on_msg)(int level, const char *msg);
     void (*on_bind)(const char *host, unsigned short port);
-    void (*on_stream_connection_made)(ADDRESS_PAIR *addr, void *ctx);
-
-    /* A new request coming,
-     * set data to a context associate with this session,
-     * */
-    void (*on_new_stream)(ADDRESS *addr, void **ctx, void *stream_id);
-    void (*on_stream_teardown)(void *ctx);
+    void (*on_stream_connection_made)(ADDRESS_PAIR *addr, int stream_index);
+    void (*on_stream_teardown)(int stream_index);
 
     /* A new udp dgram request
      * set data to a context associate with it
      * */
-    void (*on_new_dgram)(ADDRESS_PAIR *addr, void **ctx);
-    void (*on_dgram_teardown)(void *ctx);
+    void (*on_new_dgram)(ADDRESS_PAIR *addr, int dgram_index);
+    void (*on_dgram_teardown)(int dgram_index);
 
 
-    int (*on_plain_stream)(MEM_RANGE *buf, int direct, void *ctx);
-    void (*on_plain_dgram)(MEM_RANGE *buf, int direct, void *ctx);
+    int (*on_plain_stream)(const char *data, size_t data_len, int direct, int stream_index);
+    void (*on_plain_dgram)(const char *data, size_t data_len, int direct, int dgram_index);
 } SSCRYPTO_CALLBACKS;
 
 typedef struct SSCRYPTO_CTX{
@@ -144,12 +139,5 @@ typedef struct SSCRYPTO_CTX{
  * @return                      0 on success
  */
 int sscrypto_launch(SSCRYPTO_CTX *ctx);
-
-/**
- * @brief                       获取底层功能接口(发送数据; 停止收发)
- *
- * @param port                  返回时填充函数表
- */
-void sscrypto_server_port(IOCTL_PORT *port);
 
 #endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H

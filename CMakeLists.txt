@@ -43,19 +43,33 @@ SET(SHADOWSOCKSNETIO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/client.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/util.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/flow.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/list.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dgramsc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dnsc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/s5.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/handler.c
         )
 
+SET(TLSFLAT_SRC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tlsflat.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/root.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/handler.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/crt_pool.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_send.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_recv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_handshake.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_transmit.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/util.c
+        )
+
 SET(SHADOWSOCKSCRYPTO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/launch.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/callback.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/handler.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c
 
         ${SHADOWSOCKSNETIO_SRC}
+        ${TLSFLAT_SRC}
         )
 
 IF( ENABLE_SHAREDLIB )

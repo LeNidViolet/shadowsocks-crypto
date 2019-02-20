@@ -1,6 +1,6 @@
 /**
  *  Copyright 2018, raprepo.
- *  Created by raprepo on 2018/8/7.
+ *  Created by raprepo on 2018/8/23.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,28 +20,36 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef SHADOWSOCKS_NETIO_DNSC_H
-#define SHADOWSOCKS_NETIO_DNSC_H
+#include <stdlib.h>
+#include <string.h>
+#include "internal.h"
 
-#include <netinet/in.h>
-#include "shadowsocks-crypto/list.h"
+int on_tls_recv(void *ctx, unsigned char *buf, size_t len) {
+    TLS_SESSION *ts;
+    STREAM_SESSION_TLF *ss;
+    size_t wants = len, eaten = 0;
 
-typedef struct {
-    LIST_ENTRY list;
+    ts = (TLS_SESSION *)ctx;
 
-    char host[256];
+    if ( ts->buf_in.data_len ) {
+        eaten = wants > ts->buf_in.data_len ? ts->buf_in.data_len : wants;
+        memcpy(buf, ts->buf_in.data_base, eaten);
 
-    union{
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    }t;
-} DNSC;
+        ts->buf_in.data_len -= eaten;
+        if ( ts->buf_in.data_len ) {
+            ts->buf_in.data_base += eaten;
+        } else {
+            ts->buf_in.data_base = ts->buf_in.buf_base;
+        }
+    }
 
-int dnsc_init(void);
-DNSC *dnsc_find(char *host);
-DNSC *dnsc_add(char *host, struct sockaddr *addr);
-void dnsc_remove(DNSC *dnsc);
-void dnsc_clear(void);
+    ss = ts->ss;
+    tlsflat_notify(4, "%4d [%s] <== %s SIDE WANT %d EATEN %d",
+                   ss->index,
+                   ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+                   ts->is_local ? "SERVER" : "CLIENT",
+                   (int)len,
+                   eaten);
 
-#endif //SHADOWSOCKS_NETIO_DNSC_H
+    return (int)eaten > 0 ? (int)eaten : MBEDTLS_ERR_SSL_WANT_READ;
+}

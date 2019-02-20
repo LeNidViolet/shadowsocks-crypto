@@ -1,6 +1,6 @@
 /**
  *  Copyright 2018, raprepo.
- *  Created by raprepo on 2018/8/7.
+ *  Created by raprepo on 2018/8/20.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -20,28 +20,17 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef SHADOWSOCKS_NETIO_DNSC_H
-#define SHADOWSOCKS_NETIO_DNSC_H
+#ifndef TLS_FLAT_TLS_FLAT_H
+#define TLS_FLAT_TLS_FLAT_H
 
-#include <netinet/in.h>
-#include "shadowsocks-crypto/list.h"
+#include <stddef.h>
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 
-typedef struct {
-    LIST_ENTRY list;
+int tlsflat_init(IOCTL_PORT *port);
+void tlsflat_clear(void);
 
-    char host[256];
+void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
+void tlsflat_on_stream_teardown(void *tls_ctx);
+int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
 
-    union{
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    }t;
-} DNSC;
-
-int dnsc_init(void);
-DNSC *dnsc_find(char *host);
-DNSC *dnsc_add(char *host, struct sockaddr *addr);
-void dnsc_remove(DNSC *dnsc);
-void dnsc_clear(void);
-
-#endif //SHADOWSOCKS_NETIO_DNSC_H
+#endif //TLS_FLAT_TLS_FLAT_H

@@ -24,7 +24,7 @@
 #define SHADOWSOCKS_NETIO_DGRAMSC_H
 
 #include "uv.h"
-#include "list.h"
+#include "shadowsocks-crypto/list.h"
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
