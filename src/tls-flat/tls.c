@@ -118,7 +118,7 @@ static int tls_srv_init(TLS_SRV *srv) {
 
     mbedtls_ssl_conf_dbg(&srv->conf, tls_debug_out, stdout);
 
-    mbedtls_debug_set_threshold(3);
+    mbedtls_debug_set_threshold(0);
 
     ret = mbedtls_ctr_drbg_seed(
         &srv->ctr_drbg,
