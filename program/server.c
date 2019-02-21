@@ -24,20 +24,61 @@
 #include <stdio.h>
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 
-void on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
-    (void)ctx;
-    printf("CONNECTION: %s:%d -> %s:%d\n",
-        addr->local->host, addr->local->port,
-        addr->remote->host, addr->remote->port);
-}
 
 void on_bind(const char *host, unsigned short port) {
     printf("BIND ON %s:%d\n", host, port);
 }
 
 void on_msg(int level, const char *msg) {
-    printf("%d %s\n", level, msg);
+    if ( level < 2 )
+        printf("%d %s\n", level, msg);
 }
+
+void on_stream_connection_made(ADDRESS_PAIR *addr, int index) {
+    (void)index;
+    printf("CONNECTION: %s:%d -> %s:%d\n",
+        addr->local->host, addr->local->port,
+        addr->remote->host, addr->remote->port);
+}
+
+void on_stream_teardown(int stream_index) {
+    (void)stream_index;
+}
+
+int on_plain_stream(const char *data, size_t data_len, int direct, int stream_index) {
+    int ret = PASS;
+
+    (void)data;
+    (void)data_len;
+    (void)direct;
+    (void)stream_index;
+
+    return ret;
+}
+
+
+void on_dgram_connection_made(ADDRESS_PAIR *addr, int dgram_index) {
+    (void)dgram_index;
+    printf("UDP %s:%d -> %s:%d\n",
+           addr->local->host,
+           addr->local->port,
+           addr->remote->host,
+           addr->remote->port);
+}
+
+void on_dgram_teardown(int dgram_index) {
+    (void)dgram_index;
+}
+
+
+void on_plain_dgram(const char *data, size_t data_len, int direct, int dgram_index) {
+    (void)data;
+    (void)data_len;
+    (void)direct;
+    (void)dgram_index;
+}
+
+
 
 int main() {
     SSCRYPTO_CTX ctx = { 0 };
@@ -48,9 +89,16 @@ int main() {
     ctx.config.method = "AES-256-CFB";
     ctx.config.idel_timeout = 60 * 1000;
 
-    ctx.callbacks.on_stream_connection_made = on_stream_connection_made;
     ctx.callbacks.on_bind = on_bind;
     ctx.callbacks.on_msg = on_msg;
+
+    ctx.callbacks.on_stream_connection_made = on_stream_connection_made;
+    ctx.callbacks.on_stream_teardown = on_stream_teardown;
+    ctx.callbacks.on_plain_stream = on_plain_stream;
+
+    ctx.callbacks.on_dgram_connection_made = on_dgram_connection_made;
+    ctx.callbacks.on_dgram_teardown = on_dgram_teardown;
+    ctx.callbacks.on_plain_dgram = on_plain_dgram;
 
     sscrypto_launch(&ctx);
 

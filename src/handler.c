@@ -167,8 +167,8 @@ void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
     ds->index = dgram_index++;
 
     *ctx = ds;
-    if ( CryptoEnv.callbacks.on_new_dgram ) {
-        CryptoEnv.callbacks.on_new_dgram(addr, ds->index);
+    if ( CryptoEnv.callbacks.on_dgram_connection_made ) {
+        CryptoEnv.callbacks.on_dgram_connection_made(addr, ds->index);
     }
 
     dsn_outstanding++;

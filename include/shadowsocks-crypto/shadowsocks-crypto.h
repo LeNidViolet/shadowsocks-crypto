@@ -114,7 +114,7 @@ typedef struct SSCRYPTO_CALLBACKS{
     /* A new udp dgram request
      * set data to a context associate with it
      * */
-    void (*on_new_dgram)(ADDRESS_PAIR *addr, int dgram_index);
+    void (*on_dgram_connection_made)(ADDRESS_PAIR *addr, int dgram_index);
     void (*on_dgram_teardown)(int dgram_index);
 
 
