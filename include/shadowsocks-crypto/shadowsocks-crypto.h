@@ -25,71 +25,6 @@
 
 #include <stddef.h>
 
-#define MAX_S5_HDR_LEN                          (255 + 6)
-#define MAX_SS_TCP_PAYLOAD_LEN                  (10 * 1024)
-#define MAX_SS_UDP_PAYLOAD_LEN                  (512)
-#define MAX_SS_SALT_LEN                         (32)
-#define MAX_SS_TAG_LEN                          (16)
-
-#define MAX_SS_TCP_WRAPPER_LEN     (2 + MAX_SS_TAG_LEN + MAX_SS_TAG_LEN + MAX_SS_SALT_LEN)
-#define MAX_SS_UDP_WRAPPER_LEN     (MAX_SS_TAG_LEN + MAX_SS_SALT_LEN)
-
-#define MAX_SS_TCP_FRAME_LEN       (MAX_SS_TCP_PAYLOAD_LEN + MAX_S5_HDR_LEN + MAX_SS_TCP_WRAPPER_LEN)
-#define MAX_SS_UDP_FRAME_LEN       (MAX_SS_UDP_PAYLOAD_LEN + MAX_S5_HDR_LEN + MAX_SS_UDP_WRAPPER_LEN)
-
-enum {
-    STREAM_UP,      /* local -> remote */
-    STREAM_DOWN     /* remote -> local */
-};
-
-enum {
-    PASS,
-    NEEDMORE,
-    REJECT,
-    TERMINATE
-};
-
-typedef struct ADDRESS{
-    char host[64];      /* HostName or IpAddress */
-    unsigned short port;
-} ADDRESS;
-
-typedef struct ADDRESS_PAIR{
-    ADDRESS *local;
-    ADDRESS *remote;
-} ADDRESS_PAIR;
-
-typedef struct MEM_RANGE{
-    char *buf_base;
-    size_t buf_len;
-    char *data_base;
-    size_t data_len;
-} MEM_RANGE;
-
-typedef void (*write_stream_out_callback)(void* param, int direct, int status, void *ctx);
-typedef struct IOCTL_PORT{
-    /* Interface for send data out */
-    int (*write_stream_out)(
-        MEM_RANGE *buf, int direct, void *stream_id,
-        write_stream_out_callback callback, void *param);
-
-    void (*stream_pause)(void *stream_id, int direct, int pause);
-} IOCTL_PORT;
-
-typedef struct SSNETIO_BASE_CONFIG{
-    const char *bind_host;
-    unsigned short bind_port;
-    unsigned int idel_timeout;
-
-    /* Client sode only. */
-    const char *ss_srv_addr;
-    unsigned short ss_srv_port;
-} SSNETIO_BASE_CONFIG;
-
-typedef struct SSNETIO_CTX{
-    SSNETIO_BASE_CONFIG config;
-} SSNETIO_CTX;
-
 typedef struct SSCRYPTO_BASE_CONFIG{
     const char *bind_host;
     unsigned short bind_port;
@@ -108,13 +43,23 @@ typedef struct SSCRYPTO_BASE_CONFIG{
 typedef struct SSCRYPTO_CALLBACKS{
     void (*on_msg)(int level, const char *msg);
     void (*on_bind)(const char *host, unsigned short port);
-    void (*on_stream_connection_made)(ADDRESS_PAIR *addr, int stream_index);
+    void (*on_stream_connection_made)(
+        const char *addr_local,
+        unsigned short port_local,
+        const char *addr_remote,
+        unsigned short port_remote,
+        int stream_index);
     void (*on_stream_teardown)(int stream_index);
 
     /* A new udp dgram request
      * set data to a context associate with it
      * */
-    void (*on_dgram_connection_made)(ADDRESS_PAIR *addr, int dgram_index);
+    void (*on_dgram_connection_made)(
+        const char *addr_local,
+        unsigned short port_local,
+        const char *addr_remote,
+        unsigned short port_remote,
+        int dgram_index);
     void (*on_dgram_teardown)(int dgram_index);
 
 

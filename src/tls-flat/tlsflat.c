@@ -20,7 +20,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include "tls-flat/tls-flat.h"
 #include "internal.h"
 
 IOCTL_PORT Ioctl = {0};

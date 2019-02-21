@@ -21,11 +21,12 @@
  * IN THE SOFTWARE.
  */
 
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
-SSNETIO_CTX *netio_ctx;
-extern SSNETIO_CTX srv_ctx;
-extern SSNETIO_CTX clt_ctx;
+SSCRYPTO_CTX *netio_ctx;
+extern SSCRYPTO_CTX srv_ctx;
+extern SSCRYPTO_CTX clt_ctx;
 static int runmode;
 
 static void conn_timer_expire(uv_timer_t *handle);

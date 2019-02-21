@@ -21,19 +21,18 @@
  * IN THE SOFTWARE.
  */
 #include <stdlib.h>
-#include "shadowsocks-crypto/shadowsocks-crypto.h"
-#include "tls-flat/tls-flat.h"
 #include "internal.h"
 
 CRYPTO_ENV CryptoEnv = { 0 };
 
-int ssnetio_server_launch(SSNETIO_CTX *ctx);
-int ssnetio_client_launch(SSNETIO_CTX *ctx);
+int ssnetio_server_launch(SSCRYPTO_CTX *ctx);
+int ssnetio_client_launch(SSCRYPTO_CTX *ctx);
 void ssnetio_server_port(IOCTL_PORT *port);
+int tlsflat_init(IOCTL_PORT *port);
+void tlsflat_clear(void);
 
 int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     int ret = -1;
-    SSNETIO_CTX netio_ctx = { 0 };
     IOCTL_PORT io_port;
 
     BREAK_ON_NULL(ctx);
@@ -44,12 +43,6 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     BREAK_ON_NULL(CryptoEnv.method);
 
     CHECK(0 == gen_key(ctx->config.password, CryptoEnv.key, CryptoEnv.method->key_len));
-
-    netio_ctx.config.bind_host       = ctx->config.bind_host;
-    netio_ctx.config.bind_port       = ctx->config.bind_port;
-    netio_ctx.config.ss_srv_addr     = ctx->config.ss_srv_addr;
-    netio_ctx.config.ss_srv_port     = ctx->config.ss_srv_port;
-    netio_ctx.config.idel_timeout    = ctx->config.idel_timeout;
 
     /* Save caller's callbacks */
     CryptoEnv.callbacks = ctx->callbacks;
@@ -68,9 +61,9 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
 
     /* 启动SS NETIO, 开始监听 */
     if ( 0 == ctx->config.as_server ) {
-        ret = ssnetio_client_launch(&netio_ctx);
+        ret = ssnetio_client_launch(ctx);
     } else {
-        ret = ssnetio_server_launch(&netio_ctx);
+        ret = ssnetio_server_launch(ctx);
     }
 
     /* 释放加密解密单元资源 */

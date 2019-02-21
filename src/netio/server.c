@@ -27,9 +27,9 @@
 #include "dgramsc.h"
 #include "dnsc.h"
 
-SSNETIO_CTX srv_ctx;
+SSCRYPTO_CTX srv_ctx;
 
-static int server_run(SSNETIO_CTX *ctx);
+static int server_run(SSCRYPTO_CTX *ctx);
 static void conn_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
 static int do_handshake(PROXY_NODE *pn);
 static int do_req_lookup(PROXY_NODE *pn);
@@ -60,7 +60,7 @@ void ssnetio_server_port(IOCTL_PORT *port) {
     port->stream_pause = ssnetio_stream_pause;
 }
 
-int ssnetio_server_launch(SSNETIO_CTX *ctx) {
+int ssnetio_server_launch(SSCRYPTO_CTX *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
@@ -84,7 +84,7 @@ BREAK_LABEL:
     return ret;
 }
 
-static int server_run(SSNETIO_CTX *ctx) {
+static int server_run(SSCRYPTO_CTX *ctx) {
     struct addrinfo hints;
     uv_loop_t *loop;
     int ret;

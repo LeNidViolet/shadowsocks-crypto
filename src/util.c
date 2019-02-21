@@ -22,7 +22,6 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"

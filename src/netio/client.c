@@ -28,7 +28,7 @@
 #include "dnsc.h"
 #include "s5.h"
 
-SSNETIO_CTX clt_ctx;
+SSCRYPTO_CTX clt_ctx;
 static union {
     struct sockaddr addr;
     struct sockaddr_in addr4;
@@ -37,7 +37,7 @@ static union {
 
 static int dgramc_outstanding = 0;
 
-static int client_run(SSNETIO_CTX *ctx);
+static int client_run(SSCRYPTO_CTX *ctx);
 static void get_ss_srv_addr_done(
     uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static int do_handshake(PROXY_NODE *pn);
@@ -66,7 +66,7 @@ static void dgram_tear_down(DGRAMC_NODE *dcn);
 static void dgram_close_done(uv_handle_t* handle);
 
 
-int ssnetio_client_launch(SSNETIO_CTX *ctx) {
+int ssnetio_client_launch(SSCRYPTO_CTX *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
@@ -87,7 +87,7 @@ BREAK_LABEL:
     return ret;
 }
 
-static int client_run(SSNETIO_CTX *ctx) {
+static int client_run(SSCRYPTO_CTX *ctx) {
     struct addrinfo hints;
     uv_loop_t *loop;
     int ret;

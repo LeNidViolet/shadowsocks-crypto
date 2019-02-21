@@ -24,8 +24,6 @@
 #include <memory.h>
 #include "mbedtls/platform.h"
 #include "mbedtls/cipher.h"
-#include "shadowsocks-crypto/shadowsocks-crypto.h"
-#include "tls-flat/tls-flat.h"
 #include "internal.h"
 
 static unsigned int ssn_outstanding = 0;
@@ -54,6 +52,10 @@ typedef struct {
     int index;
 } DGRAM_SESSION_CRYP;
 
+
+void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
+void tlsflat_on_stream_teardown(void *tls_ctx);
+int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
 
 static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
     const mbedtls_cipher_info_t *info;
@@ -107,7 +109,12 @@ void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
     }
 
     if ( CryptoEnv.callbacks.on_stream_connection_made ) {
-        CryptoEnv.callbacks.on_stream_connection_made(addr, ss->index);
+        CryptoEnv.callbacks.on_stream_connection_made(
+            addr->local->host,
+            addr->local->port,
+            addr->remote->host,
+            addr->remote->port,
+            ss->index);
     }
 }
 
@@ -168,7 +175,11 @@ void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
 
     *ctx = ds;
     if ( CryptoEnv.callbacks.on_dgram_connection_made ) {
-        CryptoEnv.callbacks.on_dgram_connection_made(addr, ds->index);
+        CryptoEnv.callbacks.on_dgram_connection_made(
+            addr->local->host,
+            addr->local->port,
+            addr->remote->host,
+            addr->remote->port, ds->index);
     }
 
     dsn_outstanding++;

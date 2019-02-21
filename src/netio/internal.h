@@ -26,7 +26,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include "shadowsocks-crypto/shadowsocks-crypto.h"
+#include "shadowsocks-crypto/comm.h"
 #include "uv.h"
 /* Session states. */
 enum sess_state {
@@ -115,42 +115,6 @@ typedef struct PROXY_NODE {
 
 
 
-#define BREAK_LABEL                                     \
-    cleanup
-
-#define BREAK_ON_FAILURE_WITH_LABEL(_status, label)     \
-if ( (_status) != 0 )                                   \
-    goto label
-
-#define BREAK_ON_FAILURE(_status)                       \
-    BREAK_ON_FAILURE_WITH_LABEL(_status, BREAK_LABEL)
-
-#define BREAK_ON_NULL_WITH_LABEL(value, label)          \
-if ( !(value) )                                         \
-    goto label
-
-#define BREAK_ON_NULL(_value)                           \
-    BREAK_ON_NULL_WITH_LABEL(_value, BREAK_LABEL)
-
-#define BREAK_ON_FALSE        BREAK_ON_NULL
-
-#define BREAK_NOW                                       \
-    goto BREAK_LABEL
-
-#if defined(NDEBUG)
-# define ASSERT(exp)
-# define CHECK(exp)     do { if (!(exp)) abort(); } while (0)
-# define DEBUG_CHECKS (0)
-#else
-# define ASSERT(exp)  assert(exp)
-# define CHECK(exp)   assert(exp)
-# define DEBUG_CHECKS (1)
-#endif
-
-#define ENSURE(exp)     do { if (!(exp)) abort(); } while (0)
-
-#define UNREACHABLE()   CHECK(!"Unreachable code reached.")
-
 
 #define htons_u(x)          (unsigned short)( (((x) & 0xffu) << 8u) | (((x) & 0xff00u) >> 8u) )
 #define ntohs_u(x)          htons_u(x)
@@ -160,11 +124,6 @@ if ( !(value) )                                         \
                             (((x) & 0xff0000u) >> 8u) | \
                             (((x) & 0xff000000) >> 24u) )
 #define htonl_u(x)          ntohl_u(x)
-
-
-#define CONTAINER_OF(ptr, type, field)                                        \
-  ((type *) ((char *) (ptr) - ((char *) &((type *) 0)->field)))
-
 
 /* URIL.C */
 int str_sockaddr(const struct sockaddr *addr, ADDRESS *addr_s);

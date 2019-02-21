@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
+#include "shadowsocks-crypto/comm.h"
 #include "mbedtls/cipher.h"
 
 typedef struct {
@@ -44,43 +45,6 @@ typedef struct {
 
     SSCRYPTO_CALLBACKS callbacks;
 }CRYPTO_ENV;
-
-#define BREAK_LABEL                                     \
-    cleanup
-
-#define BREAK_ON_FAILURE_WITH_LABEL(_status, label)     \
-if ( (_status) != 0 )                                   \
-    goto label
-
-#define BREAK_ON_FAILURE(_status)                       \
-    BREAK_ON_FAILURE_WITH_LABEL(_status, BREAK_LABEL)
-
-#define BREAK_ON_NULL_WITH_LABEL(value, label)          \
-if ( !(value) )                                         \
-    goto label
-
-#define BREAK_ON_NULL(_value)                           \
-    BREAK_ON_NULL_WITH_LABEL(_value, BREAK_LABEL)
-
-#define BREAK_ON_FALSE        BREAK_ON_NULL
-
-#define BREAK_NOW                                       \
-    goto BREAK_LABEL
-
-#if defined(NDEBUG)
-# define ASSERT(exp)
-# define CHECK(exp)     do { if (!(exp)) abort(); } while (0)
-# define DEBUG_CHECKS (0)
-#else
-# define ASSERT(exp)  assert(exp)
-# define CHECK(exp)   assert(exp)
-# define DEBUG_CHECKS (1)
-#endif
-
-#define ENSURE(exp)     do { if (!(exp)) abort(); } while (0)
-
-#define UNREACHABLE()   CHECK(!"Unreachable code reached.")
-
 
 /* UTIL.C */
 /* return 0 if success */
