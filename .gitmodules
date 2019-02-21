@@ -1,1 +1,7 @@
 
+[submodule "libuv"]
+	path = libuv
+	url = https://github.com/libuv/libuv.git
+[submodule "mbedtls-flat"]
+	path = mbedtls-flat
+	url = https://github.com/raprepo/mbedtls-flat.git
