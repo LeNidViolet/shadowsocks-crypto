@@ -24,13 +24,13 @@
 
 IOCTL_PORT Ioctl = {0};
 
-int tlsflat_init(IOCTL_PORT *port) {
+int tlsflat_init(IOCTL_PORT *port, const char* crt_file, const char* key_file) {
     int ret = -1;
 
     BREAK_ON_NULL(port);
     Ioctl = *port;
 
-    ret = tls_init();
+    ret = tls_init(crt_file, key_file);
     BREAK_ON_FAILURE(ret);
     ret = crt_pool_init();
     BREAK_ON_FAILURE(ret);

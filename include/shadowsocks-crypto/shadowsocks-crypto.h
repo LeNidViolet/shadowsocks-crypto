@@ -30,14 +30,11 @@ typedef struct SSCRYPTO_BASE_CONFIG{
     unsigned short bind_port;
     unsigned int idel_timeout;
 
-    /* Client sode only. */
-    const char *ss_srv_addr;
-    unsigned short ss_srv_port;
-
     const char *password;
     const char *method;
 
-    int as_server;  /* 0=client, server otherwise */
+    const char *root_crt_file;
+    const char *root_key_file;
 } SSCRYPTO_BASE_CONFIG;
 
 typedef struct SSCRYPTO_CALLBACKS{

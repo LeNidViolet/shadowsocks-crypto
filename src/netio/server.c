@@ -68,7 +68,6 @@ int ssnetio_server_launch(SSCRYPTO_CTX *ctx) {
     BREAK_ON_NULL(ctx->config.bind_port);
     BREAK_ON_NULL(ctx->config.idel_timeout);
 
-    runas(server_side);
     dgrams_init();
     dnsc_init();
 

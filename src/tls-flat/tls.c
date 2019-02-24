@@ -83,17 +83,17 @@ static int tls_handshake_sni_cb(
     size_t name_len);
 
 static int tls_clt_init(TLS_CLT *clt);
-static int tls_srv_init(TLS_SRV *srv);
+static int tls_srv_init(TLS_SRV *srv, const char* crt_file, const char* key_file);
 static void do_handshake(TLS_SESSION *ts);
 static void do_transmit(TLS_SESSION *ts);
 
 static TLS Tls;
 
-int tls_init(void) {
+int tls_init(const char* crt_file, const char* key_file) {
     int ret;
 
     memset(&Tls, 0, sizeof(Tls));
-    ret = tls_srv_init(&Tls.srv);
+    ret = tls_srv_init(&Tls.srv, crt_file, key_file);
     if ( 0 == ret )
         ret = tls_clt_init(&Tls.clt);
 
@@ -104,7 +104,7 @@ int tls_init(void) {
 /*
  * 初始化 tls server 端
  */
-static int tls_srv_init(TLS_SRV *srv) {
+static int tls_srv_init(TLS_SRV *srv, const char* crt_file, const char* key_file) {
     int ret;
 
     mbedtls_x509_crt_init(&srv->root_crt);
@@ -129,20 +129,26 @@ static int tls_srv_init(TLS_SRV *srv) {
     );
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_x509_crt_parse(
-        &srv->root_crt,
-        root_crt,
-        root_crt_len
-    );
+//    ret = mbedtls_x509_crt_parse(
+//        &srv->root_crt,
+//        root_crt,
+//        root_crt_len
+//    );
+//    BREAK_ON_FAILURE(ret);
+//
+//    ret = mbedtls_pk_parse_key(
+//        &srv->root_key,
+//        root_key,
+//        root_key_len,
+//        NULL,
+//        0
+//    );
+//    BREAK_ON_FAILURE(ret);
+
+    ret = mbedtls_x509_crt_parse_file(&srv->root_crt, crt_file);
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_pk_parse_key(
-        &srv->root_key,
-        root_key,
-        root_key_len,
-        NULL,
-        0
-    );
+    ret = mbedtls_pk_parse_keyfile(&srv->root_key, key_file, NULL);
     BREAK_ON_FAILURE(ret);
 
     ret = mbedtls_ssl_config_defaults(

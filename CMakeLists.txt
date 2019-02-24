@@ -40,7 +40,6 @@ ENDIF()
 
 SET(SHADOWSOCKSNETIO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/server.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/client.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/util.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/flow.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dgramsc.c

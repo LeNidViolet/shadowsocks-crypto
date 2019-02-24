@@ -24,10 +24,9 @@
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
-SSCRYPTO_CTX *netio_ctx;
+
 extern SSCRYPTO_CTX srv_ctx;
-extern SSCRYPTO_CTX clt_ctx;
-static int runmode;
+SSCRYPTO_CTX *netio_ctx = &srv_ctx;
 
 static void conn_timer_expire(uv_timer_t *handle);
 static void do_next(CONN *sender);
@@ -35,17 +34,6 @@ static void loop_walk_clear(uv_loop_t *loop);
 static void loop_walk_cb(uv_handle_t* handle, void* arg);
 static void loop_walk_close_done(uv_handle_t* handle);
 
-void runas(int mode) {
-    if ( server_side == mode ) {
-        netio_ctx = &srv_ctx;
-    } else if ( client_side == mode ) {
-        netio_ctx = &clt_ctx;
-    } else {
-        UNREACHABLE();
-    }
-
-    runmode = mode;
-}
 
 void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     ADDRESS address = {0};
@@ -125,30 +113,28 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
             BREAK_NOW;
         }
 
-        if ( server_side == runmode ) {
-            /* udp bind */
-            ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
-            CHECK(0 == uv_udp_init(loop, udp_handle));
+        /* udp bind */
+        ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
+        CHECK(0 == uv_udp_init(loop, udp_handle));
 
-            /* associate buf to handle */
-            ENSURE((ss_buf = malloc(sizeof(*ss_buf))) != NULL);
-            ENSURE((ss_buf->buf_base = malloc(MAX_SS_UDP_FRAME_LEN)) != NULL);
-            ss_buf->data_base = ss_buf->buf_base;
-            ss_buf->buf_len = MAX_SS_UDP_FRAME_LEN;
-            uv_handle_set_data((uv_handle_t*)udp_handle, ss_buf);
+        /* associate buf to handle */
+        ENSURE((ss_buf = malloc(sizeof(*ss_buf))) != NULL);
+        ENSURE((ss_buf->buf_base = malloc(MAX_SS_UDP_FRAME_LEN)) != NULL);
+        ss_buf->data_base = ss_buf->buf_base;
+        ss_buf->buf_len = MAX_SS_UDP_FRAME_LEN;
+        uv_handle_set_data((uv_handle_t*)udp_handle, ss_buf);
 
-            ret = uv_udp_bind(udp_handle, &s.addr, 0);
-            if ( 0 != ret ) {
-                ssnetio_on_msg(
-                    1,
-                    "udp bind to %s:%d failed: %s",
-                    address.host,
-                    address.port,
-                    uv_strerror(ret));
-                BREAK_NOW;
-            }
-            CHECK(0 == dgram_read_local(udp_handle));
+        ret = uv_udp_bind(udp_handle, &s.addr, 0);
+        if ( 0 != ret ) {
+            ssnetio_on_msg(
+                1,
+                "udp bind to %s:%d failed: %s",
+                address.host,
+                address.port,
+                uv_strerror(ret));
+            BREAK_NOW;
         }
+        CHECK(0 == dgram_read_local(udp_handle));
 
         ssnetio_on_bind(address.host, address.port);
     }
@@ -232,10 +218,8 @@ void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
 
     buf->base = conn->ss_buf.buf_base;
 
-    if ( server_side == runmode && conn == &conn->pn->outgoing ) {
+    if ( conn == &conn->pn->outgoing ) {
         buf->len = MAX_SS_TCP_PAYLOAD_LEN;
-    } else if ( client_side == runmode && conn == &conn->pn->incoming ) {
-        buf->len = MAX_SS_TCP_PAYLOAD_LEN + MAX_S5_HDR_LEN;
     } else {
         buf->len = conn->ss_buf.buf_len;
     }
@@ -422,12 +406,7 @@ int do_proxy(CONN *sender) {
     outgoing = &sender->pn->outgoing;
 
     if ( c_done == sender->rdstate && sender->result >= 0 ) {
-        if ( server_side == runmode )
-            encrypt = sender == outgoing;
-        else if ( client_side == runmode )
-            encrypt = sender == incoming;
-        else
-            UNREACHABLE();
+        encrypt = sender == outgoing;
 
         if ( encrypt ) {
             sender->ss_buf.data_len = (size_t)sender->result;
@@ -535,21 +514,11 @@ int do_clear(PROXY_NODE *pn) {
 }
 
 static void conn_timer_expire(uv_timer_t *handle) {
-    if ( server_side == runmode )
-        conn_timer_expire_server(handle);
-    else if ( client_side == runmode )
-        conn_timer_expire_client(handle);
-    else
-        UNREACHABLE();
+    conn_timer_expire_server(handle);
 }
 
 static void do_next(CONN *sender) {
-    if ( server_side == runmode )
-        do_next_server(sender);
-    else if ( client_side == runmode )
-        do_next_client(sender);
-    else
-        UNREACHABLE();
+    do_next_server(sender);
 }
 
 static void loop_walk_clear(uv_loop_t *loop) {

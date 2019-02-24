@@ -171,13 +171,6 @@ int ssnetio_write_stream_out(
     write_stream_out_callback callback, void *param);
 void ssnetio_stream_pause(void *stream_id, int direct, int pause);
 
-/* FLOW.C */
-enum {
-    server_side,
-    client_side
-};
-void runas(int mode);
-
 void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 void on_connection(uv_stream_t *server, int status);
 void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf);
@@ -199,9 +192,8 @@ int do_kill(PROXY_NODE *pn);
 int do_almost_dead(PROXY_NODE *pn);
 int do_clear(PROXY_NODE *pn);
 
-void conn_timer_expire_client(uv_timer_t *handle);
 void conn_timer_expire_server(uv_timer_t *handle);
 void do_next_server(CONN *sender);
-void do_next_client(CONN *sender);
+
 
 #endif //SHADOWSOCKS_NETIO_INTERNAL_H
