@@ -35,8 +35,6 @@ enum sess_state {
     s_req_parse,        /* Wait for request data. */
     s_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
     s_req_connect,      /* Wait for uv_tcp_connect() to complete. */
-    s_dgram_start,
-    s_dgram_stop,
     s_proxy_ready,
     s_proxy_start,      /* Connected. Start piping data. */
     s_proxy,            /* Connected. Pipe data back and forth. */
@@ -131,18 +129,13 @@ void cpy_sockaddr(const struct sockaddr *src, struct sockaddr *dst);
 int equal_sockaddr(const struct sockaddr *src, struct sockaddr *dst);
 void set_sockaddr_port(struct sockaddr *addr, unsigned short port);
 int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s);
-int str_udp_endpoint(const uv_udp_t *udp_handle, ADDRESS *addr_s);
 
 enum {
     s5_invalid_length = -1,
     s5_invalid_version = -2,
     s5_invalid_method = -3
 };
-enum {
-    s5_cmd_connect = 1,
-    s5_cmd_bind = 2,
-    s5_cmd_udp_associate = 3
-};
+
 int s5_simple_check(const char *data, size_t data_len);
 
 /* Parse the host/ip and port from incoming data.

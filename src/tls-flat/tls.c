@@ -31,11 +31,6 @@
 #include "mbedtls/util.h"
 #include "internal.h"
 
-extern const unsigned char root_crt[];
-extern const size_t root_crt_len;
-extern const unsigned char root_key[];
-extern const size_t root_key_len;
-
 
 /*
  * 供 SERVER 端使用的 TLS 环境
@@ -129,22 +124,7 @@ static int tls_srv_init(TLS_SRV *srv, const char* crt_file, const char* key_file
     );
     BREAK_ON_FAILURE(ret);
 
-//    ret = mbedtls_x509_crt_parse(
-//        &srv->root_crt,
-//        root_crt,
-//        root_crt_len
-//    );
-//    BREAK_ON_FAILURE(ret);
-//
-//    ret = mbedtls_pk_parse_key(
-//        &srv->root_key,
-//        root_key,
-//        root_key_len,
-//        NULL,
-//        0
-//    );
-//    BREAK_ON_FAILURE(ret);
-
+    /* 使用传入的根证书文件以及秘钥 */
     ret = mbedtls_x509_crt_parse_file(&srv->root_crt, crt_file);
     BREAK_ON_FAILURE(ret);
 

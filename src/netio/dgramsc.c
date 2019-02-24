@@ -94,8 +94,8 @@ void dgrams_clear(void) {
 }
 
 static void dgrams_close(DGRAMS *dgrams) {
-    if ( dgrams->state < u_closing1 ) {
-        dgrams->state = u_closing1;
+    if ( dgrams->state < u_closing ) {
+        dgrams->state = u_closing;
         uv_close((uv_handle_t *)&dgrams->udp_out, dgrams_close_done);
         uv_close((uv_handle_t *)&dgrams->timer, dgrams_close_done);
     }

@@ -24,9 +24,7 @@
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
-
 extern SSCRYPTO_CTX srv_ctx;
-SSCRYPTO_CTX *netio_ctx = &srv_ctx;
 
 static void conn_timer_expire(uv_timer_t *handle);
 static void do_next(CONN *sender);
@@ -67,7 +65,7 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     }
     BREAK_ON_NULL(naddrs);
 
-    port = netio_ctx->config.bind_port;
+    port = srv_ctx.config.bind_port;
     for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
         if ( AF_INET != ai->ai_family && AF_INET6 != ai->ai_family ) {
             continue;
@@ -178,7 +176,7 @@ void on_connection(uv_stream_t *server, int status) {
     incoming->result = 0;
     incoming->rdstate = c_stop;
     incoming->wrstate = c_stop;
-    incoming->idle_timeout = netio_ctx->config.idel_timeout;
+    incoming->idle_timeout = srv_ctx.config.idel_timeout;
     CHECK(0 == uv_timer_init(loop, &incoming->timer_handle));
 
     CHECK(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
@@ -187,7 +185,7 @@ void on_connection(uv_stream_t *server, int status) {
     outgoing->result = 0;
     outgoing->rdstate = c_stop;
     outgoing->wrstate = c_stop;
-    outgoing->idle_timeout = netio_ctx->config.idel_timeout;
+    outgoing->idle_timeout = srv_ctx.config.idel_timeout;
     CHECK(0 == uv_timer_init(loop, &outgoing->timer_handle));
 
     incoming->ss_buf.buf_base = incoming->ss_buf.data_base = incoming->t.slab;

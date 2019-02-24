@@ -29,37 +29,9 @@
 #include "internal.h"
 
 
-typedef struct {
-    struct DGRAMC_NODE *dcn;
-    union {
-        uv_handle_t handle;
-        uv_udp_t udp;
-    } handle;
-    uv_udp_send_t req;
-    union {
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    } addr;
-    char slab[MAX_SS_UDP_FRAME_LEN];
-    SSNETIO_BUF ss_buf;
-}DGRAMC;
-
-typedef struct DGRAMC_NODE{
-    int state;
-    DGRAMC incoming;
-    DGRAMC outgoing;
-    CONN *tcp;
-    uv_timer_t timer;
-
-    void *ctx;
-}DGRAMC_NODE;
-
 enum{
     u_using,
-    u_closing0,
-    u_closing1,
-    u_closing2,
+    u_closing,
     u_dead
 };
 

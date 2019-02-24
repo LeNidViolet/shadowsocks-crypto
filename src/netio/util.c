@@ -155,21 +155,6 @@ int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s) {
 }
 
 
-int str_udp_endpoint(const uv_udp_t *udp_handle, ADDRESS *addr_s) {
-    union {
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    } s;
-    int addr_len = sizeof(s);
-
-    CHECK(0 == uv_udp_getsockname(udp_handle,
-                                  &s.addr,
-                                  &addr_len));
-
-    return str_sockaddr(&s.addr, addr_s);
-}
-
 int s5_simple_check(const char *data, size_t data_len) {
     int ret;
     const char *p;
