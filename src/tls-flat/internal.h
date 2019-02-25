@@ -75,7 +75,7 @@ void tlsflat_notify(int level, const char *format, ...);
 void tlsflat_plain_stream(STREAM_SESSION_TLF *ss, int direct, const char *data, size_t data_len);
 
 /* TLS.C */
-int tls_init(const char* crt_file, const char* key_file);
+int tls_init(void);
 void tls_clear(void);
 int tls_associate_context(mbedtls_ssl_context *ssl,  int as_server);
 int tls_recv_done_do_next(TLS_SESSION *ts);

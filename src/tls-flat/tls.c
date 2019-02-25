@@ -32,6 +32,11 @@
 #include "internal.h"
 
 
+extern const unsigned char root_crt[];
+extern const size_t root_crt_len;
+extern const unsigned char root_key[];
+extern const size_t root_key_len;
+
 /*
  * 供 SERVER 端使用的 TLS 环境
  */
@@ -78,17 +83,17 @@ static int tls_handshake_sni_cb(
     size_t name_len);
 
 static int tls_clt_init(TLS_CLT *clt);
-static int tls_srv_init(TLS_SRV *srv, const char* crt_file, const char* key_file);
+static int tls_srv_init(TLS_SRV *srv);
 static void do_handshake(TLS_SESSION *ts);
 static void do_transmit(TLS_SESSION *ts);
 
 static TLS Tls;
 
-int tls_init(const char* crt_file, const char* key_file) {
+int tls_init(void) {
     int ret;
 
     memset(&Tls, 0, sizeof(Tls));
-    ret = tls_srv_init(&Tls.srv, crt_file, key_file);
+    ret = tls_srv_init(&Tls.srv);
     if ( 0 == ret )
         ret = tls_clt_init(&Tls.clt);
 
@@ -99,7 +104,7 @@ int tls_init(const char* crt_file, const char* key_file) {
 /*
  * 初始化 tls server 端
  */
-static int tls_srv_init(TLS_SRV *srv, const char* crt_file, const char* key_file) {
+static int tls_srv_init(TLS_SRV *srv) {
     int ret;
 
     mbedtls_x509_crt_init(&srv->root_crt);
@@ -124,11 +129,18 @@ static int tls_srv_init(TLS_SRV *srv, const char* crt_file, const char* key_file
     );
     BREAK_ON_FAILURE(ret);
 
-    /* 使用传入的根证书文件以及秘钥 */
-    ret = mbedtls_x509_crt_parse_file(&srv->root_crt, crt_file);
+    ret = mbedtls_x509_crt_parse(
+        &srv->root_crt,
+        root_crt,
+        root_crt_len);
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_pk_parse_keyfile(&srv->root_key, key_file, NULL);
+    ret = mbedtls_pk_parse_key(
+        &srv->root_key,
+        root_key,
+        root_key_len,
+        NULL,
+        0);
     BREAK_ON_FAILURE(ret);
 
     ret = mbedtls_ssl_config_defaults(

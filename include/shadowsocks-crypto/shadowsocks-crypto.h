@@ -32,9 +32,6 @@ typedef struct SSCRYPTO_BASE_CONFIG{
 
     const char *password;
     const char *method;
-
-    const char *root_crt_file;
-    const char *root_key_file;
 } SSCRYPTO_BASE_CONFIG;
 
 typedef struct SSCRYPTO_CALLBACKS{

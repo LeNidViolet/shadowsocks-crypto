@@ -27,7 +27,7 @@ CRYPTO_ENV CryptoEnv = { 0 };
 
 int ssnetio_server_launch(SSCRYPTO_CTX *ctx);
 void ssnetio_server_port(IOCTL_PORT *port);
-int tlsflat_init(IOCTL_PORT *port, const char* crt_file, const char* key_file);
+int tlsflat_init(IOCTL_PORT *port);
 void tlsflat_clear(void);
 
 int sscrypto_launch(SSCRYPTO_CTX *ctx) {
@@ -49,7 +49,7 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
 
     /* 初始化 TLS 部分 */
     ssnetio_server_port(&io_port);
-    ret = tlsflat_init(&io_port, ctx->config.root_crt_file, ctx->config.root_key_file);
+    ret = tlsflat_init(&io_port);
     if ( 0 != ret ) {
         sscrypto_on_msg(1, "Tlsflat init Failed");
         BREAK_NOW;
