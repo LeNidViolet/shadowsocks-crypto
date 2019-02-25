@@ -37,6 +37,7 @@ static mbedtls_cipher_context_t decrypt_dgram_ctx;                      /* UDP�
 /* TCP流CONTEXT */
 typedef struct {
     int index;
+    int connected;                                                      /* 是否连接上 */
 
     mbedtls_cipher_context_t encrypt_ctx;                               /* 每个TCP流都有自己的加密解密环境CTX */
     mbedtls_cipher_context_t decrypt_ctx;
@@ -116,6 +117,7 @@ void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     ss->is_tls = 0;
     ss->stream_id = stream_id;
     ss->index = stream_index++;
+    ss->connected = 0;
 
     *ctx = ss;
 
@@ -142,6 +144,8 @@ void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
             ss->index
             );
     }
+
+    ss->connected = 1;
 }
 
 void sscrypto_on_stream_teardown(void *ctx) {
@@ -154,7 +158,10 @@ void sscrypto_on_stream_teardown(void *ctx) {
     }
 
     if ( CryptoEnv.callbacks.on_stream_teardown ) {
-        CryptoEnv.callbacks.on_stream_teardown(ss->index);
+        /* 如果链接未链接上 不用继续向上调用 */
+        if ( ss->connected ) {
+            CryptoEnv.callbacks.on_stream_teardown(ss->index);
+        }
     }
 
     mbedtls_cipher_free(&ss->encrypt_ctx);
