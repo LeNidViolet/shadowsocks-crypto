@@ -144,20 +144,3 @@ BREAK_LABEL:
 
     return ret;
 }
-
-const CRYPTO_INFO *get_method_by_type(mbedtls_cipher_type_t type) {
-    const CRYPTO_INFO *ret = NULL, *info;
-
-    for ( unsigned int i = 0; i < Methods_Count; ++i ) {
-        info = &Methods[i];
-
-        if ( type == info->type ) {
-            ret = info;
-            break;
-        }
-    }
-
-BREAK_LABEL:
-
-    return ret;
-}

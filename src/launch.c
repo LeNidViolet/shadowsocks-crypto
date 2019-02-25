@@ -25,11 +25,6 @@
 
 CRYPTO_ENV CryptoEnv = { 0 };
 
-int ssnetio_server_launch(SSCRYPTO_CTX *ctx);
-void ssnetio_server_port(IOCTL_PORT *port);
-int tlsflat_init(IOCTL_PORT *port);
-void tlsflat_clear(void);
-
 int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     int ret = -1;
     IOCTL_PORT io_port;
@@ -41,31 +36,39 @@ int sscrypto_launch(SSCRYPTO_CTX *ctx) {
     CryptoEnv.method = get_method_by_name(ctx->config.method);
     BREAK_ON_NULL(CryptoEnv.method);
 
+
+    /* 根据设置的密码生成加密用的KEY */
     CHECK(0 == gen_key(ctx->config.password, CryptoEnv.key, CryptoEnv.method->key_len));
 
-    /* Save caller's callbacks */
+
+    /* 保存回调 */
     CryptoEnv.callbacks = ctx->callbacks;
 
 
-    /* 初始化 TLS 部分 */
+    /* 获取NETIO底层发送数据等接口.需要在TLSFLAT中使用 */
     ssnetio_server_port(&io_port);
+    /* 初始化 TLS 部分 */
     ret = tlsflat_init(&io_port);
     if ( 0 != ret ) {
         sscrypto_on_msg(1, "Tlsflat init Failed");
         BREAK_NOW;
     }
 
+
     /* 初始化加密解密单元 */
     init_crypt_unit();
 
+
     /* 启动SS NETIO, 开始监听 */
     ret = ssnetio_server_launch(ctx);
+
 
     /* 释放加密解密单元资源 */
     free_crypt_unit();
 
     /* 释放 TLS 资源 */
     tlsflat_clear();
+
 
     sscrypto_on_msg(3, "Program Exiting");
 

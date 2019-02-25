@@ -34,17 +34,18 @@ typedef struct {
     const char *ss_name;
     const unsigned int key_len;
     const unsigned int iv_len;
-}CRYPTO_INFO;
+} CRYPTO_INFO;
 
 
 #define MAX_CRYPTO_KEY_LEN          (32)
 #define MAX_CRYPTO_SALT_LEN         MAX_SS_SALT_LEN
+
 typedef struct {
     const CRYPTO_INFO *method;
     unsigned char key[MAX_CRYPTO_KEY_LEN];
 
     SSCRYPTO_CALLBACKS callbacks;
-}CRYPTO_ENV;
+} CRYPTO_ENV;
 
 /* UTIL.C */
 /* return 0 if success */
@@ -53,25 +54,21 @@ int gen_iv(const char *seed, unsigned char *iv, size_t iv_len);
 int gen_key(const char *seed, unsigned char *key, size_t key_len);
 
 const CRYPTO_INFO *get_method_by_name(const char *name);
-const CRYPTO_INFO *get_method_by_type(mbedtls_cipher_type_t type);
 
 
 /* CALLBACK.C */
 int init_crypt_unit(void);
 void free_crypt_unit(void);
 void sscrypto_on_msg(int level, const char *msg);
-void sscrypto_on_bind(const char *host, unsigned short port);
-void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
-void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id);
-void sscrypto_on_stream_teardown(void *ctx);
-void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx);
-void sscrypto_on_dgram_teardown(void *ctx);
-int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
-void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx);
-int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
-int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
-int sscrypto_on_dgram_encrypt(MEM_RANGE *buf);
-int sscrypto_on_dgram_decrypt(MEM_RANGE *buf);
 
-extern CRYPTO_ENV CryptoEnv;
+
+/* EXTERNAL FUNCTION */
+int ssnetio_server_launch(SSCRYPTO_CTX *ctx);
+void ssnetio_server_port(IOCTL_PORT *port);
+int tlsflat_init(IOCTL_PORT *port);
+void tlsflat_clear(void);
+void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
+void tlsflat_on_stream_teardown(void *tls_ctx);
+int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
+
 #endif //SHADOWSOCKS_CRYPTO_INTERNAL_H

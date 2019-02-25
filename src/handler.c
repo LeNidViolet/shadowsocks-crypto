@@ -29,33 +29,37 @@
 static unsigned int ssn_outstanding = 0;
 static unsigned int dsn_outstanding = 0;
 
-static unsigned char crypto_space[16 * 1024 + MAX_SS_TCP_WRAPPER_LEN];
-static mbedtls_cipher_context_t encrypt_dgram_ctx;
-static mbedtls_cipher_context_t decrypt_dgram_ctx;
+static unsigned char crypto_space[16 * 1024 + MAX_SS_TCP_WRAPPER_LEN];  /* 加密解密缓冲区 */
+static mbedtls_cipher_context_t encrypt_dgram_ctx;                      /* UDP加密环境CTX */
+static mbedtls_cipher_context_t decrypt_dgram_ctx;                      /* UDP解密环境CTX */
 
+
+/* TCP流CONTEXT */
 typedef struct {
-    mbedtls_cipher_context_t encrypt_ctx;
-    mbedtls_cipher_context_t decrypt_ctx;
-    unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
-    unsigned char iv_decrypt[MAX_CRYPTO_SALT_LEN];
-    int first_encrypt;
-    int first_decrypt;
-
     int index;
 
-    int is_tls;
-    void *tls_ctx;
-    void *stream_id;
+    mbedtls_cipher_context_t encrypt_ctx;                               /* 每个TCP流都有自己的加密解密环境CTX */
+    mbedtls_cipher_context_t decrypt_ctx;
+
+    unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
+    unsigned char iv_decrypt[MAX_CRYPTO_SALT_LEN];
+
+    int first_encrypt;                                                  /* 首次加密解密操作略有不同 */
+    int first_decrypt;
+
+    int is_tls;                                                         /* 是否是TLS流 */
+    void *tls_ctx;                                                      /* TLSFLAT使用的环境CTX */
+    void *stream_id;                                                    /* 透明数据,回调时使用 */
 } STREAM_SESSION_CRYP;
 
+
+/* UDP流CONTEXT */
 typedef struct {
     int index;
 } DGRAM_SESSION_CRYP;
 
 
-void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
-void tlsflat_on_stream_teardown(void *tls_ctx);
-int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
+extern CRYPTO_ENV CryptoEnv;
 
 static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
     const mbedtls_cipher_info_t *info;
@@ -70,7 +74,6 @@ static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
         8 * CryptoEnv.method->key_len,
         mode));
 }
-
 
 int init_crypt_unit(void) {
     init_cipher(&encrypt_dgram_ctx, MBEDTLS_ENCRYPT);
@@ -97,27 +100,6 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
     }
 }
 
-void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
-    STREAM_SESSION_CRYP *ss;
-
-    ss = (STREAM_SESSION_CRYP *)ctx;
-    CHECK(ss);
-
-    if ( 443 == addr->remote->port ) {
-        ss->is_tls = 1;
-        tlsflat_on_stream_connection_made(addr, ss->stream_id, ss, &ss->tls_ctx);
-    }
-
-    if ( CryptoEnv.callbacks.on_stream_connection_made ) {
-        CryptoEnv.callbacks.on_stream_connection_made(
-            addr->local->host,
-            addr->local->port,
-            addr->remote->host,
-            addr->remote->port,
-            ss->index);
-    }
-}
-
 void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     static int stream_index = 0;
     STREAM_SESSION_CRYP *ss;
@@ -138,6 +120,28 @@ void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
     *ctx = ss;
 
     ssn_outstanding++;
+}
+
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
+    STREAM_SESSION_CRYP *ss;
+
+    ss = (STREAM_SESSION_CRYP *)ctx;
+    CHECK(ss);
+
+    if ( 443 == addr->remote->port ) {              /* 如果是TLS流, 通知TLSFLAT */
+        ss->is_tls = 1;
+        tlsflat_on_stream_connection_made(addr, ss->stream_id, ss, &ss->tls_ctx);
+    }
+
+    if ( CryptoEnv.callbacks.on_stream_connection_made ) {
+        CryptoEnv.callbacks.on_stream_connection_made(
+            addr->local->host,
+            addr->local->port,
+            addr->remote->host,
+            addr->remote->port,
+            ss->index
+            );
+    }
 }
 
 void sscrypto_on_stream_teardown(void *ctx) {
@@ -179,7 +183,9 @@ void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
             addr->local->host,
             addr->local->port,
             addr->remote->host,
-            addr->remote->port, ds->index);
+            addr->remote->port,
+            ds->index
+            );
     }
 
     dsn_outstanding++;
@@ -224,10 +230,12 @@ BREAK_LABEL:
     return action;
 }
 
+/* 由TLSFLAT解密数据之后调用至此 */
 void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct, void *ss_ctx) {
     STREAM_SESSION_CRYP *ss;
 
     ss = (STREAM_SESSION_CRYP *)ss_ctx;
+    CHECK(ss);
 
     if ( CryptoEnv.callbacks.on_plain_stream ) {
         CryptoEnv.callbacks.on_plain_stream(data, data_len, direct, ss->index);
@@ -259,6 +267,7 @@ int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
     if ( ss->first_encrypt ) {
         const char *seed = "seed name here";
 
+        /* 首个数据包需要生成IV */
         ret = gen_iv(seed, ss->iv_encrypt, iv_len);
         BREAK_ON_FAILURE(ret);
 
@@ -269,15 +278,16 @@ int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
         BREAK_ON_FAILURE(ret);
     }
 
+    pos = crypto_space;
     encrypt_len = buf->data_len;
+
     if ( ss->first_encrypt ) {
         encrypt_len += iv_len;
     }
     CHECK(encrypt_len <= buf->buf_len);
 
-    pos = crypto_space;
-
     if ( ss->first_encrypt ) {
+        /* 填写IV */
         memcpy(pos, ss->iv_encrypt, iv_len);
         pos += iv_len;
         encrypt_len -= iv_len;
@@ -325,6 +335,7 @@ int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
         if ( buf->data_len < iv_len )
             BREAK_NOW;
 
+        /* 首个数据包最前面是IV */
         memcpy(ss->iv_decrypt, buf->data_base, iv_len);
         ret = mbedtls_cipher_set_iv(
             &ss->decrypt_ctx,
@@ -333,10 +344,11 @@ int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
         BREAK_ON_FAILURE(ret);
     }
 
+    pos = buf->data_base;
     decrypt_len = buf->data_len;
 
-    pos = buf->data_base;
     if ( ss->first_decrypt ) {
+        /* 越过IV部分 */
         pos += iv_len;
         decrypt_len -= iv_len;
     }
