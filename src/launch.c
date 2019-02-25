@@ -76,3 +76,7 @@ BREAK_LABEL:
 
     return ret;
 }
+
+void sscrypto_stop(void) {
+    ssnetio_server_stop();
+}

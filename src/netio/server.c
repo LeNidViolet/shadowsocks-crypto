@@ -87,6 +87,20 @@ BREAK_LABEL:
     return ret;
 }
 
+
+static void async_cb(uv_async_t* handle) {
+    (void)handle;
+    uv_stop(uv_default_loop());
+}
+
+void ssnetio_server_stop(void) {
+    static uv_async_t uvasync;
+
+    /* 利用 async_t 在 loop 所在线程中去关闭 loop */
+    uv_async_init(uv_default_loop(), &uvasync, async_cb);
+    uv_async_send(&uvasync);
+}
+
 static int server_run(SSCRYPTO_CTX *ctx) {
     struct addrinfo hints;
     uv_loop_t *loop;

@@ -78,5 +78,6 @@ typedef struct SSCRYPTO_CTX{
  * @return                      0 on success
  */
 int sscrypto_launch(const SSCRYPTO_CTX *ctx);
+void sscrypto_stop(void);
 
 #endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H

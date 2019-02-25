@@ -64,6 +64,7 @@ void sscrypto_on_msg(int level, const char *msg);
 
 /* EXTERNAL FUNCTION */
 int ssnetio_server_launch(const SSCRYPTO_CTX *ctx);
+void ssnetio_server_stop(void);
 void ssnetio_server_port(IOCTL_PORT *port);
 int tlsflat_init(const IOCTL_PORT *port);
 void tlsflat_clear(void);
