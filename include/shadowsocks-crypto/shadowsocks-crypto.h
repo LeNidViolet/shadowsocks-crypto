@@ -57,7 +57,7 @@ typedef struct SSCRYPTO_CALLBACKS{
     void (*on_dgram_teardown)(int dgram_index);
 
 
-    int (*on_plain_stream)(const char *data, size_t data_len, int direct, int stream_index);
+    void (*on_plain_stream)(const char *data, size_t data_len, int direct, int stream_index);
     void (*on_plain_dgram)(const char *data, size_t data_len, int direct, int dgram_index);
 } SSCRYPTO_CALLBACKS;
 

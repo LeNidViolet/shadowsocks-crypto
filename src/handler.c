@@ -222,7 +222,7 @@ int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
     }
 
     if ( CryptoEnv.callbacks.on_plain_stream ) {
-        action = CryptoEnv.callbacks.on_plain_stream(buf->data_base, buf->data_len, direct, ss->index);
+        CryptoEnv.callbacks.on_plain_stream(buf->data_base, buf->data_len, direct, ss->index);
     }
 
 BREAK_LABEL:
