@@ -306,7 +306,7 @@ static int tls_handshake_sni_cb(
     const unsigned char *name,
     size_t name_len) {
     TLS_SESSION *ts;
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     int result = -1;
 
     (void)p_info;

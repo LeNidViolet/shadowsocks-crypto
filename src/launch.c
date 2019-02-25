@@ -25,7 +25,7 @@
 
 CRYPTO_ENV CryptoEnv = { 0 };
 
-int sscrypto_launch(SSCRYPTO_CTX *ctx) {
+int sscrypto_launch(const SSCRYPTO_CTX *ctx) {
     int ret = -1;
     IOCTL_PORT io_port;
 

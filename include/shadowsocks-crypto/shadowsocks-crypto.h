@@ -28,7 +28,7 @@
 typedef struct SSCRYPTO_BASE_CONFIG{
     const char *bind_host;
     unsigned short bind_port;
-    unsigned int idel_timeout;
+    unsigned int idel_timeout;  /* 秒 */
 
     const char *password;
     const char *method;
@@ -77,6 +77,6 @@ typedef struct SSCRYPTO_CTX{
  *
  * @return                      0 on success
  */
-int sscrypto_launch(SSCRYPTO_CTX *ctx);
+int sscrypto_launch(const SSCRYPTO_CTX *ctx);
 
 #endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H

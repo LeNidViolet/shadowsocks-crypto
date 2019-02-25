@@ -38,7 +38,7 @@ int dnsc_init(void) {
     return 0;
 }
 
-DNSC *dnsc_find(char *host) {
+DNSC *dnsc_find(const char *host) {
     DNSC *ret = NULL, *dnsc;
     LIST_ENTRY *next;
 
@@ -58,7 +58,7 @@ BREAK_LABEL:
     return ret;
 }
 
-DNSC *dnsc_add(char *host, struct sockaddr *addr) {
+DNSC *dnsc_add(const char *host, struct sockaddr *addr) {
     DNSC *ret = NULL;
 
     BREAK_ON_NULL(host);

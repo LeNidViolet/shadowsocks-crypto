@@ -44,34 +44,6 @@ enum {
     s5_dead
 };
 
-void s5_init(s5_ctx *cx) {
-    memset(cx, 0, sizeof(*cx));
-    cx->state = s5_version;
-}
-
-s5_err s5_parse_udp(s5_ctx *cx, uint8_t **data, size_t *size) {
-    uint8_t *p = *data;
-
-    /* reserved:2 frag:1 atyp:1 daddr:4(ipv4) dport:2*/
-    if ( *size < 10 )
-        return s5_bad_prot;
-
-    /* skip reserved, 2 bytes */
-    p += 2;
-
-    /* does not support frame frag */
-    if ( *p != 0 )
-        return s5_bad_prot;
-
-    memset(cx, 0, sizeof(*cx));
-    cx->state = s5_req_atyp;
-
-    *data += 3;
-    *size -= 3;
-
-    return s5_parse(cx, data, size);
-}
-
 s5_err s5_parse_ss(s5_ctx *cx, uint8_t **data, size_t *size) {
     /* atyp:1 daddr:4(ipv4) dport:2*/
     if ( *size < 7 )
@@ -271,36 +243,4 @@ out:
     *data = p + i;
     *size = n - i;
     return err;
-}
-
-unsigned int s5_auth_methods(const s5_ctx *cx) {
-    return cx->methods;
-}
-
-int s5_select_auth(s5_ctx *cx, s5_auth_method method) {
-    int err;
-
-    err = 0;
-    switch (method) {
-    case S5_AUTH_NONE:
-        cx->state = s5_req_version;
-        break;
-    case S5_AUTH_PASSWD:
-        cx->state = s5_auth_pw_version;
-        break;
-    default:
-        err = -EINVAL;
-    }
-
-    return err;
-}
-
-const char *s5_strerror(s5_err err) {
-#define S5_ERR_GEN(_, name, errmsg) case s5_ ## name: return errmsg;
-    switch (err) {
-    S5_ERR_MAP(S5_ERR_GEN)
-    default: ;  /* Silence s5_max_errors -Wswitch warning. */
-    }
-#undef S5_ERR_GEN
-    return "Unknown error.";
 }

@@ -63,12 +63,12 @@ void sscrypto_on_msg(int level, const char *msg);
 
 
 /* EXTERNAL FUNCTION */
-int ssnetio_server_launch(SSCRYPTO_CTX *ctx);
+int ssnetio_server_launch(const SSCRYPTO_CTX *ctx);
 void ssnetio_server_port(IOCTL_PORT *port);
-int tlsflat_init(IOCTL_PORT *port);
+int tlsflat_init(const IOCTL_PORT *port);
 void tlsflat_clear(void);
-void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
+void tlsflat_on_stream_connection_made(const ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
 void tlsflat_on_stream_teardown(void *tls_ctx);
-int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
+int tlsflat_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx);
 
 #endif //SHADOWSOCKS_CRYPTO_INTERNAL_H

@@ -29,12 +29,12 @@
 
 SSCRYPTO_CTX srv_ctx;
 
+/* 向前声明 */
 static int server_run(SSCRYPTO_CTX *ctx);
 static void conn_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
 static int do_handshake(PROXY_NODE *pn);
 static int do_req_lookup(PROXY_NODE *pn);
 static int do_req_connect(PROXY_NODE *pn);
-
 static void dgram_alloc_cb_local(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void dgram_read_done_local(
     uv_udp_t *handle, ssize_t nread,
@@ -55,12 +55,15 @@ static void dgram_send_done_local(uv_udp_send_t *req, int status);
 static void dgram_timer_reset(DGRAMS *dgrams);
 static void dgram_timer_expire(uv_timer_t *handle);
 
+
+/* 取得NETIO底层操作接口 */
 void ssnetio_server_port(IOCTL_PORT *port) {
     port->write_stream_out = ssnetio_write_stream_out;
     port->stream_pause = ssnetio_stream_pause;
 }
 
-int ssnetio_server_launch(SSCRYPTO_CTX *ctx) {
+/* LAUNCHER */
+int ssnetio_server_launch(const SSCRYPTO_CTX *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
@@ -72,6 +75,7 @@ int ssnetio_server_launch(SSCRYPTO_CTX *ctx) {
     dnsc_init();
 
     memcpy(&srv_ctx, ctx, sizeof(srv_ctx));
+    srv_ctx.config.idel_timeout *= 1000;
 
     ret = server_run(&srv_ctx);
 

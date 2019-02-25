@@ -101,7 +101,7 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
     }
 }
 
-void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id) {
+void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id) {
     static int stream_index = 0;
     STREAM_SESSION_CRYP *ss;
 
@@ -175,7 +175,7 @@ void sscrypto_on_stream_teardown(void *ctx) {
     ssn_outstanding--;
 }
 
-void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx) {
+void sscrypto_on_new_dgram(const ADDRESS_PAIR *addr, void **ctx) {
     static int dgram_index = 0;
     DGRAM_SESSION_CRYP *ds;
 
@@ -215,7 +215,7 @@ void sscrypto_on_dgram_teardown(void *ctx) {
     dsn_outstanding--;
 }
 
-int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
+int sscrypto_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx) {
     STREAM_SESSION_CRYP *ss;
     int action = PASS;
 
@@ -249,7 +249,7 @@ void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct,
     }
 }
 
-void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx) {
+void sscrypto_on_plain_dgram(const MEM_RANGE *buf, int direct, void *ctx) {
     DGRAM_SESSION_CRYP *ds;
 
     ds = (DGRAM_SESSION_CRYP *)ctx;

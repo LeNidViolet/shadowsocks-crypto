@@ -189,4 +189,20 @@ void conn_timer_expire_server(uv_timer_t *handle);
 void do_next_server(CONN *sender);
 
 
+/* EXTERNAL FUNCTION */
+// 向上调用至CRYPTO对用的回调中
+void sscrypto_on_msg(int level, const char *msg);
+void sscrypto_on_bind(const char *host, unsigned short port);
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
+void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id);
+void sscrypto_on_stream_teardown(void *ctx);
+void sscrypto_on_new_dgram(const ADDRESS_PAIR *addr, void **ctx);
+void sscrypto_on_dgram_teardown(void *ctx);
+int sscrypto_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx);
+void sscrypto_on_plain_dgram(const MEM_RANGE *buf, int direct, void *ctx);
+int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
+int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
+int sscrypto_on_dgram_encrypt(MEM_RANGE *buf);
+int sscrypto_on_dgram_decrypt(MEM_RANGE *buf);
+
 #endif //SHADOWSOCKS_NETIO_INTERNAL_H

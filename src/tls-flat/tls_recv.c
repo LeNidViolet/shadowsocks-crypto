@@ -26,7 +26,7 @@
 
 int on_tls_recv(void *ctx, unsigned char *buf, size_t len) {
     TLS_SESSION *ts;
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     size_t wants = len, eaten = 0;
 
     ts = (TLS_SESSION *)ctx;
@@ -37,8 +37,10 @@ int on_tls_recv(void *ctx, unsigned char *buf, size_t len) {
 
         ts->buf_in.data_len -= eaten;
         if ( ts->buf_in.data_len ) {
+            /* 还有剩余数据待取 */
             ts->buf_in.data_base += eaten;
         } else {
+            /* 数据已空 */
             ts->buf_in.data_base = ts->buf_in.buf_base;
         }
     }

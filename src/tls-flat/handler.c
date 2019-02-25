@@ -26,35 +26,32 @@
 #include <zconf.h>
 #include "internal.h"
 
-void sscrypto_on_msg(int level, const char *msg);
-void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct, void *ss_ctx);
-
+/* 消息向上传递 */
 void tlsflat_notify(int level, const char *format, ...) {
     va_list ap;
     char msg[1024];
 
     va_start(ap, format);
-
     vsnprintf(msg, sizeof(msg), format, ap);
-    sscrypto_on_msg(level, msg);
-
     va_end(ap);
+
+    sscrypto_on_msg(level, msg);
 
 BREAK_LABEL:
 
     return;
 }
 
-void tlsflat_plain_stream(STREAM_SESSION_TLF *ss, int direct, const char *data, size_t data_len) {
+/* 解密明文向上传递 */
+void tlsflat_plain_stream(STREAM_SESSION *ss, int direct, const char *data, size_t data_len) {
     sscrypto_tls_on_plain_stream(data, data_len, direct, ss->caller_ctx);
 }
 
-void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
+/* 对外接口, 应当在TLS连接创建完毕时调用 */
+void tlsflat_on_stream_connection_made(const ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
     static unsigned int index = 0;
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     const int init_size = 1024;
-
-    ASSERT(443 == addr->remote->port);
 
     ss = malloc(sizeof(*ss));
     memset(ss, 0, sizeof(*ss));
@@ -95,33 +92,43 @@ void tlsflat_on_stream_connection_made(ADDRESS_PAIR *addr, void *stream_id, void
     *tls_ctx = ss;
 }
 
+
+/* 对外接口, 应当在TLS连接销毁时调用 */
 void tlsflat_on_stream_teardown(void *tls_ctx) {
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
 
-    ss = (STREAM_SESSION_TLF *)tls_ctx;
+    if ( tls_ctx ) {
+        ss = (STREAM_SESSION *)tls_ctx;
 
-    mbedtls_ssl_free(&ss->srv.ssl);
-    mbedtls_ssl_free(&ss->clt.ssl);
+        mbedtls_ssl_free(&ss->srv.ssl);
+        mbedtls_ssl_free(&ss->clt.ssl);
 
-    mem_range_free(&ss->srv.buf_in);
-    mem_range_free(&ss->clt.buf_in);
-    mem_range_free(&ss->srv.buf_out);
-    mem_range_free(&ss->clt.buf_out);
-    free(ss);
+        mem_range_free(&ss->srv.buf_in);
+        mem_range_free(&ss->clt.buf_in);
+        mem_range_free(&ss->srv.buf_out);
+        mem_range_free(&ss->clt.buf_out);
+        free(ss);
+    }
 }
 
 
-int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
-    STREAM_SESSION_TLF *ss;
+/*
+ * 对外接口, 应当在有数据来临时(原始未解密)调用
+ * 因为TLS解密可能需要的数据量比一个TCP包中所含数据多得多,
+ * 所以调用者应该根据此函数返回值执行对应操作.
+ * 一般来说每个TCP包都需要丢弃掉.
+ */
+int tlsflat_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx) {
+    STREAM_SESSION *ss;
     TLS_SESSION *ts;
     size_t rm_len, total_len;
     MEM_RANGE *in;
-    int ret;
+    int action;
 
-    ss = (STREAM_SESSION_TLF*)ctx;
+    ss = (STREAM_SESSION*)ctx;
 
     if ( ss->closing ) {
-        ret = TERMINATE;
+        action = TERMINATE;
         BREAK_NOW;
     }
 
@@ -159,9 +166,9 @@ int tlsflat_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx) {
         in->data_len = total_len;
     }
 
-    ret = tls_recv_done_do_next(ts);
+    action = tls_recv_done_do_next(ts);
 
 BREAK_LABEL:
 
-    return ret;
+    return action;
 }

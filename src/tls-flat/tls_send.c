@@ -25,16 +25,17 @@
 #include "internal.h"
 
 static void on_tls_send_done(void *param, int direct, int status, void *ctx);
+extern IOCTL_PORT Ioctl;
 
 typedef struct {
     MEM_RANGE mr;
     size_t snd_len;
     TLS_SESSION *ts;
-}TLS_SND_CTX;
+} TLS_SND_CTX;
 
 int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
     TLS_SESSION *ts;
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     int direct, ret;
     TLS_SND_CTX *tls_snd_ctx = NULL;
 
@@ -56,6 +57,7 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
         ret = -1;
         BREAK_NOW;
     case Write_Waitack:
+        /* 确认'上次'发送数据结果 */
         ASSERT(ts->wait_ack_len);
         ret = ts->wait_ack_len;
 
@@ -84,6 +86,8 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
         tls_snd_ctx);
     ASSERT(0 == ret);
 
+    /* 这里返回 MBEDTLS_ERR_SSL_WANT_WRITE 之后mbedtls会处于'等待'状态 */
+    /* 接下来的流程需要on_tls_send_done再调用至此, 并携带状态 Write_Waitack 来触发 */
     ts->wrstate = Write_Sending;
     ret = MBEDTLS_ERR_SSL_WANT_WRITE;
 
@@ -93,7 +97,7 @@ BREAK_LABEL:
 }
 
 static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     TLS_SESSION *ts;
     TLS_SND_CTX *tls_snd_ctx = NULL;
 
@@ -110,6 +114,8 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
     if ( 0 == status ) {
         ts->wrstate = Write_Waitack;
         ts->wait_ack_len = (int)tls_snd_ctx->snd_len;
+
+        /* 继续触发流程下一步 */
         tls_send_done_do_next(ts);
     } else {
         tlsflat_notify(1, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",

@@ -39,8 +39,8 @@ enum {
     Write_Waitack
 };
 
-typedef struct TLS_SESSION{
-    struct STREAM_SESSION_TLF *ss;
+typedef struct TLS_SESSION_{
+    struct STREAM_SESSION_ *ss;
     mbedtls_ssl_context ssl;
     int tls_state;
 
@@ -51,7 +51,7 @@ typedef struct TLS_SESSION{
     int wait_ack_len;
 } TLS_SESSION;
 
-typedef struct STREAM_SESSION_TLF{
+typedef struct STREAM_SESSION_{
     unsigned int index;
     ADDRESS local;
     ADDRESS remote;
@@ -68,11 +68,11 @@ typedef struct STREAM_SESSION_TLF{
 
     unsigned int bytes_out;
     unsigned int bytes_in;
-} STREAM_SESSION_TLF;
+} STREAM_SESSION;
 
 /* HANDLER.C */
 void tlsflat_notify(int level, const char *format, ...);
-void tlsflat_plain_stream(STREAM_SESSION_TLF *ss, int direct, const char *data, size_t data_len);
+void tlsflat_plain_stream(STREAM_SESSION *ss, int direct, const char *data, size_t data_len);
 
 /* TLS.C */
 int tls_init(void);
@@ -113,5 +113,8 @@ int crt_pool_get(
     mbedtls_pk_context **pk);
 void crt_pool_clear(void);
 
-extern IOCTL_PORT Ioctl;
+
+/* EXTERNAL FUNCTION */
+void sscrypto_on_msg(int level, const char *msg);
+void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct, void *ss_ctx);
 #endif //TLS_FLAT_INTERBAL_H

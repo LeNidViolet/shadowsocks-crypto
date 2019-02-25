@@ -24,7 +24,7 @@
 
 IOCTL_PORT Ioctl = {0};
 
-int tlsflat_init(IOCTL_PORT *port) {
+int tlsflat_init(const IOCTL_PORT *port) {
     int ret = -1;
 
     BREAK_ON_NULL(port);

@@ -39,8 +39,8 @@ typedef struct {
 } DNSC;
 
 int dnsc_init(void);
-DNSC *dnsc_find(char *host);
-DNSC *dnsc_add(char *host, struct sockaddr *addr);
+DNSC *dnsc_find(const char *host);
+DNSC *dnsc_add(const char *host, struct sockaddr *addr);
 void dnsc_remove(DNSC *dnsc);
 void dnsc_clear(void);
 

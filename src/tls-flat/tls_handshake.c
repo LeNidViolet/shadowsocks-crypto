@@ -23,9 +23,11 @@
 #include <stdlib.h>
 #include "internal.h"
 
+extern IOCTL_PORT Ioctl;
+
 int handle_tls_handshake(TLS_SESSION *ts) {
     int ret, action;
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     const mbedtls_x509_crt *ws_crt;
     mbedtls_x509_crt *crt;
     mbedtls_pk_context *pk;

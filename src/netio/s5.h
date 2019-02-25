@@ -49,11 +49,6 @@ typedef enum {
 } s5_auth_method;
 
 typedef enum {
-    s5_auth_allow,
-    s5_auth_deny
-} s5_auth_result;
-
-typedef enum {
     s5_atyp_ipv4,
     s5_atyp_ipv6,
     s5_atyp_host
@@ -80,16 +75,7 @@ typedef struct {
     uint8_t daddr[257];  /* TODO(bnoordhuis) Merge with username/password. */
 } s5_ctx;
 
-void s5_init(s5_ctx *ctx);
-s5_err s5_parse_udp(s5_ctx *cx, uint8_t **data, size_t *size);
 s5_err s5_parse(s5_ctx *cx, uint8_t **data, size_t *size);
 s5_err s5_parse_ss(s5_ctx *cx, uint8_t **data, size_t *size);
-/* Only call after s5_parse() has returned s5_want_auth_method. */
-unsigned int s5_auth_methods(const s5_ctx *cx);
-
-/* Call after s5_parse() has returned s5_want_auth_method. */
-int s5_select_auth(s5_ctx *cx, s5_auth_method method);
-
-const char *s5_strerror(s5_err err);
 
 #endif  /* S5_H_ */

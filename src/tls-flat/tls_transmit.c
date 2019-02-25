@@ -24,8 +24,10 @@
 #include "mbedtls/net.h"
 #include "internal.h"
 
+extern IOCTL_PORT Ioctl;
+
 int handle_tls_transmit(TLS_SESSION *ts) {
-    STREAM_SESSION_TLF *ss;
+    STREAM_SESSION *ss;
     TLS_SESSION *ts_p;
     int ret, action = REJECT;
     size_t extra_len, new_len;

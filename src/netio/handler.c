@@ -30,21 +30,6 @@ typedef struct {
 
 static void ssnetio_write_stream_out_done(uv_write_t *req, int status);
 
-// 向上调用至CRYPTO对用的回调中
-void sscrypto_on_msg(int level, const char *msg);
-void sscrypto_on_bind(const char *host, unsigned short port);
-void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
-void sscrypto_on_new_stream(ADDRESS *addr, void **ctx, void *stream_id);
-void sscrypto_on_stream_teardown(void *ctx);
-void sscrypto_on_new_dgram(ADDRESS_PAIR *addr, void **ctx);
-void sscrypto_on_dgram_teardown(void *ctx);
-int sscrypto_on_plain_stream(MEM_RANGE *buf, int direct, void *ctx);
-void sscrypto_on_plain_dgram(MEM_RANGE *buf, int direct, void *ctx);
-int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
-int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
-int sscrypto_on_dgram_encrypt(MEM_RANGE *buf);
-int sscrypto_on_dgram_decrypt(MEM_RANGE *buf);
-
 void ssnetio_on_msg(int level, const char *format, ...) {
     va_list ap;
     char msg[1024];
