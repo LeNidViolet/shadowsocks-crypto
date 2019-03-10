@@ -15,7 +15,7 @@ typedef struct _DNS_HEADER{
 	WORD    Xid;
 
 	BYTE    RecursionDesired : 1;
-	BYTE    Truncation : 1;
+	BYTE    Truncation : 1;			// 数据包是被截断的
 	BYTE    Authoritative : 1;
 	BYTE    Opcode : 4;
 	BYTE    IsResponse : 1;
@@ -91,6 +91,7 @@ typedef struct DNS_ANSWER_{
 	{
 		char			data[DNS_MAXDN];
 		DWORD			ip;
+		uint8_t 		ipV6[16];
 	}rdata;
 }DNS_ANSWER, *PDNS_ANSWER;
 
@@ -110,4 +111,4 @@ typedef struct DNS_PARSE_{
 }DNS_PARSE, *PDNS_PARSE;
 
 
-PDNS_PARSE ParseDnsRecord(const char* Buffer, unsigned long BufferLen);
+PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen);

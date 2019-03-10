@@ -24,17 +24,16 @@ unsigned short __cdecl ByteswapUshort(unsigned short i)
 }
 
 
-PDNS_PARSE ParseDnsRecord(const char* Buffer, unsigned long BufferLen) {
+PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen) {
 
 	PDNS_PARSE			result = NULL;
 	int					errCode = -1;
 
-
 	struct dns_parse parse = { 0 };
 
-	if ( !Buffer || BufferLen < sizeof(DNS_HEADER) ) BREAK_NOW;
+	if ( !data || dataLen < sizeof(DNS_HEADER) ) BREAK_NOW;
 
-	PDNS_HEADER hdr = (PDNS_HEADER)Buffer;
+	PDNS_HEADER hdr = (PDNS_HEADER)data;
 	if ( hdr->Truncation ) BREAK_NOW;
 
 	WORD questionCount = ByteswapUshort(hdr->QuestionCount);
@@ -43,8 +42,8 @@ PDNS_PARSE ParseDnsRecord(const char* Buffer, unsigned long BufferLen) {
 
 	unsigned char dn[DNS_MAXDN] = {0};
 	const unsigned char *pkt, *cur, *end;
-	pkt = (unsigned char*)Buffer;
-	end = (unsigned char*)(Buffer + BufferLen);
+	pkt = (unsigned char*)data;
+	end = (unsigned char*)(data + dataLen);
 	cur = dns_payload(pkt);
 
 	int ret = dns_getdn(pkt, &cur, end, dn, sizeof(dn));
@@ -70,11 +69,10 @@ PDNS_PARSE ParseDnsRecord(const char* Buffer, unsigned long BufferLen) {
 	result->queryType = ByteswapUshort(question->QuestionType);
 	result->queryClass = ByteswapUshort(question->QuestionClass);
 
-	if ( result->queryType != DNS_T_A ) BREAK_NOW;
+	if ( (result->queryType != DNS_T_A) && (result->queryType != DNS_T_AAAA) ) BREAK_NOW;
 
 
-	if ( answerCount > 0 )
-	{
+	if ( answerCount > 0 ) {
 		result->answers = (PDNS_ANSWER)((char*)result + sizeof(DNS_PARSE));
 
 		dns_initparse(&parse, NULL, pkt, cur, end);
@@ -83,25 +81,23 @@ PDNS_PARSE ParseDnsRecord(const char* Buffer, unsigned long BufferLen) {
 		parse.dnsp_qtyp = DNS_T_INVALID;
 
 		PDNS_ANSWER thisAnswer = result->answers;
-		for ( int i = 0; i < answerCount; i++ )
-		{
+		for ( int i = 0; i < answerCount; i++ ) {
 			struct dns_rr		rr = { 0 };
 			int rrret = dns_nextrr(&parse, &rr);
 
-			if ( rr.dnsrr_cls == DNS_C_IN && (rr.dnsrr_typ == DNS_T_A || rr.dnsrr_typ == DNS_T_CNAME) )
-			{
+			if (
+				rr.dnsrr_cls == DNS_C_IN &&
+				(rr.dnsrr_typ == DNS_T_A || rr.dnsrr_typ == DNS_T_CNAME || rr.dnsrr_typ == DNS_T_AAAA)
+				) {
 				thisAnswer->type = (WORD)rr.dnsrr_typ;
 				thisAnswer->_class = (WORD)rr.dnsrr_cls;
 				thisAnswer->ttl = (DWORD)rr.dnsrr_ttl;
 				thisAnswer->rdataLen = (WORD)rr.dnsrr_dsz;
 
 				ret = dns_dntop(rr.dnsrr_dn, thisAnswer->name, sizeof(thisAnswer->name));
-				if ( ret > 0 )
-				{
-					if ( rr.dnsrr_typ == DNS_T_A )
-					{
-						if ( rr.dnsrr_dsz == sizeof(DWORD) )
-						{
+				if ( ret > 0 ) {
+					if ( rr.dnsrr_typ == DNS_T_A ) {
+						if ( rr.dnsrr_dsz == sizeof(DWORD) ) {
 							thisAnswer->rdata.ip = *(DWORD*)rr.dnsrr_dptr;
 							thisAnswer->rdata.ip = ByteswapUlong(thisAnswer->rdata.ip);
 
@@ -109,19 +105,24 @@ PDNS_PARSE ParseDnsRecord(const char* Buffer, unsigned long BufferLen) {
 							result->answerCount++;
 						}
 					}
-					else if ( rr.dnsrr_typ == DNS_T_CNAME )
-					{
+					else if ( rr.dnsrr_typ == DNS_T_CNAME ) {
 						memset(dn, 0, sizeof(dn));
 						cur = rr.dnsrr_dptr;
 						ret = dns_getdn(pkt, &cur, end, dn, sizeof(dn));
-						if ( ret > 0 )
-						{
+						if ( ret > 0 ) {
 							ret = dns_dntop(dn, thisAnswer->rdata.data, sizeof(thisAnswer->rdata.data));
-							if ( ret > 0 )
-							{
+							if ( ret > 0 ) {
 								thisAnswer++;
 								result->answerCount++;
 							}
+						}
+					}
+					else if ( rr.dnsrr_typ == DNS_T_AAAA ) {
+						if ( rr.dnsrr_dsz == 16 ) {
+							memcpy(thisAnswer->rdata.ipV6, rr.dnsrr_dptr, 16);
+
+							thisAnswer++;
+							result->answerCount++;
 						}
 					}
 				}
