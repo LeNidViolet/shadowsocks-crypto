@@ -34,36 +34,41 @@ void on_msg(int level, const char *msg) {
         printf("%d %s\n", level, msg);
 }
 
-void on_stream_connection_made(ADDRESS_PAIR *addr, int index) {
-    (void)index;
+void on_stream_connection_made(
+    const char *addr_local,
+    unsigned short port_local,
+    const char *addr_remote,
+    unsigned short port_remote,
+    int stream_index) {
+    (void)stream_index;
     printf("CONNECTION: %s:%d -> %s:%d\n",
-        addr->local->host, addr->local->port,
-        addr->remote->host, addr->remote->port);
+           addr_local, port_local,
+           addr_remote, port_remote);
 }
 
 void on_stream_teardown(int stream_index) {
     (void)stream_index;
 }
 
-int on_plain_stream(const char *data, size_t data_len, int direct, int stream_index) {
-    int ret = PASS;
+void on_plain_stream(const char *data, size_t data_len, int direct, int stream_index) {
 
     (void)data;
     (void)data_len;
     (void)direct;
     (void)stream_index;
-
-    return ret;
 }
 
 
-void on_dgram_connection_made(ADDRESS_PAIR *addr, int dgram_index) {
+void on_dgram_connection_made(
+    const char *addr_local,
+    unsigned short port_local,
+    const char *addr_remote,
+    unsigned short port_remote,
+    int dgram_index)  {
     (void)dgram_index;
-    printf("UDP %s:%d -> %s:%d\n",
-           addr->local->host,
-           addr->local->port,
-           addr->remote->host,
-           addr->remote->port);
+    printf("UDP: %s:%d -> %s:%d\n",
+           addr_local, port_local,
+           addr_remote, port_remote);
 }
 
 void on_dgram_teardown(int dgram_index) {
@@ -82,12 +87,11 @@ void on_plain_dgram(const char *data, size_t data_len, int direct, int dgram_ind
 
 int main() {
     SSCRYPTO_CTX ctx = { 0 };
-    ctx.config.as_server = 1;
-    ctx.config.bind_host = "127.0.0.1";
+    ctx.config.bind_host = "192.168.1.32";
     ctx.config.bind_port = 14450;
     ctx.config.password = "123qwe";
     ctx.config.method = "AES-256-CFB";
-    ctx.config.idel_timeout = 60 * 1000;
+    ctx.config.idel_timeout = 60;
 
     ctx.callbacks.on_bind = on_bind;
     ctx.callbacks.on_msg = on_msg;
