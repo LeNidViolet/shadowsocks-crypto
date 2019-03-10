@@ -46,6 +46,29 @@ SET(SHADOWSOCKSNETIO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dnsc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/s5.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/handler.c
+
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/parsedns.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/dnsget.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/ex-rdns.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/getopt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/inet_XtoX.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/rblcheck.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_bl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_init.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_codes.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_dn.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_dntosp.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_jran.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_misc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_parse.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_resolver.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_rr_a.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_rr_mx.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_rr_naptr.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_rr_ptr.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_rr_srv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_rr_txt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_XtoX.c
         )
 
 SET(TLSFLAT_SRC
