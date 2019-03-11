@@ -36,6 +36,7 @@ static void conn_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addr
 static int do_handshake(PROXY_NODE *pn);
 static int do_req_lookup(PROXY_NODE *pn);
 static int do_dnsovertcp_lookup(PROXY_NODE *pn);
+static void do_dnsovertcp_packback(PROXY_NODE *pn, struct sockaddr *addr);
 static int do_req_connect(PROXY_NODE *pn);
 static void dgram_alloc_cb_local(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void dgram_read_done_local(
@@ -270,21 +271,21 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
         incoming->ss_buf.data_base + 2,
         incoming->ss_buf.data_len - 2);
     if ( parse ) {
-        printf("DNS RESOLVE %s\n", parse->queryDomain);
-
         dnsc = dnsc_find(parse->queryDomain);
         if ( dnsc ) {
+            // TODO: IPV4 ONLY FOR NOW
             ASSERT(parse->queryType == 1);
             ASSERT(dnsc->ipv4_valid);
 
-            // TODO: 组包回发
-
+            do_dnsovertcp_packback(pn, &dnsc->ipv4.addr);
+            new_state = s_kill;
         } else {
             memset(&hints, 0, sizeof(hints));
             hints.ai_family = AF_UNSPEC;
             hints.ai_socktype = SOCK_STREAM;
             hints.ai_protocol = IPPROTO_TCP;
 
+            strcpy(pn->outgoing.peer.host, parse->queryDomain);
             if ( 0 != uv_getaddrinfo(pn->loop,
                                      &pn->outgoing.t.addrinfo_req,
                                      conn_getaddrinfo_done,
@@ -436,6 +437,44 @@ BREAK_LABEL:
 }
 
 
+static void do_dnsovertcp_packback(PROXY_NODE *pn, struct sockaddr *addr) {
+    CONN *incoming = &pn->incoming;
+    struct sockaddr_in *addr_v4 = (struct sockaddr_in *)addr;
+    unsigned short dnsPktLen;
+
+    // TODO: 组包回发
+    dnsPktLen = ByteswapUshort(*(unsigned short*)incoming->ss_buf.data_base);
+    PDNS_HEADER hdr = (PDNS_HEADER)(incoming->ss_buf.data_base + 2);
+    hdr->IsResponse = 1;
+    hdr->RecursionAvailable = 1;
+    hdr->AnswerCount = ByteswapUshort(1);
+
+    char* pos = incoming->ss_buf.data_base + dnsPktLen;
+    *(unsigned short*)pos = 0x0CC0;
+    pos += 2;
+
+    PDNS_WIRE_RECORD record = (PDNS_WIRE_RECORD)pos;
+    // TODO: IPV4 ONLY FOR NOW
+    record->RecordType = ByteswapUshort(1);
+    record->RecordClass = ByteswapUshort(1); // CLASS IN
+    record->TimeToLive = ByteswapUInt32(10);
+    // TODO: IPV4 ONLY FOR NOW
+    record->DataLength = ByteswapUshort(4);
+
+    pos = (char*)(record + 1);
+    *(unsigned int*)pos = addr_v4->sin_addr.s_addr;
+
+    // TODO: IPV4 ONLY FOR NOW
+    dnsPktLen += 2 + sizeof(DNS_WIRE_RECORD) + 4;
+    *(unsigned short*)incoming->ss_buf.data_base = ByteswapUshort(dnsPktLen);
+
+    incoming->ss_buf.data_len = dnsPktLen + 2;
+
+    conn_write(
+        incoming,
+        incoming->ss_buf.data_base,
+        (unsigned int)incoming->ss_buf.data_len);
+}
 
 static int do_dnsovertcp_lookup(PROXY_NODE *pn) {
     CONN *incoming;
@@ -464,8 +503,8 @@ static int do_dnsovertcp_lookup(PROXY_NODE *pn) {
            AF_INET6 == outgoing->t.addr.sa_family);
 
 
-
-    ret = s_req_connect;
+    do_dnsovertcp_packback(pn, &outgoing->t.addr);
+    ret = s_kill;
 
 BREAK_LABEL:
 
