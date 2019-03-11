@@ -34,6 +34,7 @@ enum sess_state {
     s_req_start,        /* Start waiting for request data. */
     s_req_parse,        /* Wait for request data. */
     s_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
+    s_dnsovertcp_lookup,
     s_req_connect,      /* Wait for uv_tcp_connect() to complete. */
     s_proxy_ready,
     s_proxy_start,      /* Connected. Start piping data. */

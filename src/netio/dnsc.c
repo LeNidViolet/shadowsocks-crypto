@@ -58,23 +58,33 @@ BREAK_LABEL:
     return ret;
 }
 
-DNSC *dnsc_add(const char *host, struct sockaddr *addr) {
+DNSC *dnsc_add(const char *host, struct sockaddr *addr_v4, struct sockaddr *addr_v6) {
     DNSC *ret = NULL;
 
     BREAK_ON_NULL(host);
 
     ret = dnsc_find(host);
     if ( ret ) {
-        if ( addr ) {
-            cpy_sockaddr(addr, &ret->t.addr);
+        if ( addr_v4 ) {
+            cpy_sockaddr(addr_v4, &ret->ipv4.addr);
+            ret->ipv4_valid = 1;
+        }
+        if ( addr_v6 ) {
+            cpy_sockaddr(addr_v6, &ret->ipv6.addr);
+            ret->ipv6_valid = 1;
         }
     } else {
         ENSURE((ret = malloc(sizeof(*ret))) != NULL);
         memset(ret, 0, sizeof(*ret));
 
         snprintf(ret->host, sizeof(ret->host), "%s", host);
-        if ( addr ) {
-            cpy_sockaddr(addr, &ret->t.addr);
+        if ( addr_v4 ) {
+            cpy_sockaddr(addr_v4, &ret->ipv4.addr);
+            ret->ipv4_valid = 1;
+        }
+        if ( addr_v6 ) {
+            cpy_sockaddr(addr_v6, &ret->ipv6.addr);
+            ret->ipv6_valid = 1;
         }
 
         printf("DNSC ADD %s\n", ret->host);

@@ -26,14 +26,16 @@
 #include "internal.h"
 #include "dgramsc.h"
 #include "dnsc.h"
+#include "udns/parsedns.h"
 
 SSCRYPTO_CTX srv_ctx;
 
 /* 向前声明 */
 static int server_run(SSCRYPTO_CTX *ctx);
-static void conn_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
+static void conn_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static int do_handshake(PROXY_NODE *pn);
 static int do_req_lookup(PROXY_NODE *pn);
+static int do_dnsovertcp_lookup(PROXY_NODE *pn);
 static int do_req_connect(PROXY_NODE *pn);
 static void dgram_alloc_cb_local(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void dgram_read_done_local(
@@ -137,9 +139,12 @@ BREAK_LABEL:
 }
 
 static void conn_getaddrinfo_done(
-    uv_getaddrinfo_t *req, int status, struct addrinfo *ai) {
+    uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     CONN *incoming;
     CONN *outgoing;
+    struct addrinfo *ai;
+    struct addrinfo *ai_ipv4 = NULL;
+    struct addrinfo *ai_ipv6 = NULL;
 
     outgoing = CONTAINER_OF(req, CONN, t.addrinfo_req);
     ASSERT(outgoing == &outgoing->pn->outgoing);
@@ -148,20 +153,25 @@ static void conn_getaddrinfo_done(
     incoming = &outgoing->pn->incoming;
 
     if ( 0 == status ) {
-        if ( AF_INET == ai->ai_family ) {
-            outgoing->t.addr4 = *(const struct sockaddr_in *)ai->ai_addr;
-            outgoing->t.addr4.sin_port = htons_u(outgoing->peer.port);
+        for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
+            if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
+                ai_ipv4 = ai;
+            }
+            if ( AF_INET6 == ai->ai_family && !ai_ipv6 ) {
+                ai_ipv6 = ai;
+            }
         }
-        else if ( AF_INET6 == ai->ai_family ) {
-            outgoing->t.addr6 = *(const struct sockaddr_in6 *)ai->ai_addr;
-            outgoing->t.addr6.sin6_port = htons_u(outgoing->peer.port);
-        }
-        else {
-            UNREACHABLE();
-        }
+
+        cpy_sockaddr(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &outgoing->t.addr);
+        set_sockaddr_port(&outgoing->t.addr, htons_u(outgoing->peer.port));
+
+        dnsc_add(
+            outgoing->peer.host,
+            ai_ipv4 ? ai_ipv4->ai_addr : NULL,
+            ai_ipv6 ? ai_ipv6->ai_addr : NULL);
     }
 
-    uv_freeaddrinfo(ai);
+    uv_freeaddrinfo(addrs);
 
     incoming->pn->outstanding--;
     do_next_server(incoming);
@@ -183,6 +193,7 @@ void conn_timer_expire_server(uv_timer_t *handle) {
         incoming->result = UV_ETIMEDOUT;
         break;
     case s_req_lookup:
+    case s_dnsovertcp_lookup:
     case s_req_connect:
     case s_proxy_start:
         outgoing->result = UV_ETIMEDOUT;
@@ -213,6 +224,9 @@ void do_next_server(CONN *sender) {
     case s_req_lookup:
         new_state = do_req_lookup(pn);
         break;
+    case s_dnsovertcp_lookup:
+        new_state = do_dnsovertcp_lookup(pn);
+        break;
     case s_req_connect:
         new_state = do_req_connect(pn);
         break;
@@ -241,10 +255,68 @@ void do_next_server(CONN *sender) {
         do_clear(pn);
 }
 
+static int do_dnsovertcp(PROXY_NODE *pn) {
+    CONN *incoming;
+    int new_state;
+    struct addrinfo hints;
+    DNSC *dnsc;
+    PDNS_PARSE parse = NULL;
+
+    incoming = &pn->incoming;
+    assert(0 != incoming->ss_buf.data_len);
+
+    // DNS OVER TCP 前两字节指示包长
+    parse = ParseDnsRecord(
+        incoming->ss_buf.data_base + 2,
+        incoming->ss_buf.data_len - 2);
+    if ( parse ) {
+        printf("DNS RESOLVE %s\n", parse->queryDomain);
+
+        dnsc = dnsc_find(parse->queryDomain);
+        if ( dnsc ) {
+            ASSERT(parse->queryType == 1);
+            ASSERT(dnsc->ipv4_valid);
+
+            // TODO: 组包回发
+
+        } else {
+            memset(&hints, 0, sizeof(hints));
+            hints.ai_family = AF_UNSPEC;
+            hints.ai_socktype = SOCK_STREAM;
+            hints.ai_protocol = IPPROTO_TCP;
+
+            if ( 0 != uv_getaddrinfo(pn->loop,
+                                     &pn->outgoing.t.addrinfo_req,
+                                     conn_getaddrinfo_done,
+                                     parse->queryDomain,
+                                     NULL,
+                                     &hints) ) {
+                new_state = do_kill(pn);
+                BREAK_NOW;
+            }
+
+            pn->outstanding++;
+            conn_timer_reset(&pn->outgoing);
+
+            new_state = s_dnsovertcp_lookup;
+        }
+    } else {
+        new_state = do_kill(pn);
+    }
+
+BREAK_LABEL:
+    if ( parse )
+        free(parse);
+
+    return new_state;
+}
+
+
 static int do_handshake(PROXY_NODE *pn) {
     CONN *incoming;
     int ret, new_state;
     struct addrinfo hints;
+    DNSC *dnsc;
 
     incoming = &pn->incoming;
 
@@ -273,25 +345,46 @@ static int do_handshake(PROXY_NODE *pn) {
         BREAK_NOW;
     }
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    if ( 0 != uv_getaddrinfo(pn->loop,
-                             &pn->outgoing.t.addrinfo_req,
-                             conn_getaddrinfo_done,
-                             pn->outgoing.peer.host,
-                             NULL,
-                             &hints) ) {
-        new_state = do_kill(pn);
+    // 接管DNS查询
+    if ( 53 == pn->outgoing.peer.port ) {
+        new_state = do_dnsovertcp(pn);
         BREAK_NOW;
     }
 
-    pn->outstanding++;
-    conn_timer_reset(&pn->outgoing);
+    dnsc = dnsc_find(pn->outgoing.peer.host);
+    if ( dnsc ) {
+        if ( dnsc->ipv4_valid ) {
+            cpy_sockaddr(&dnsc->ipv4.addr, &pn->outgoing.t.addr);
+        } else {
+            cpy_sockaddr(&dnsc->ipv6.addr, &pn->outgoing.t.addr);
+        }
+        set_sockaddr_port(&pn->outgoing.t.addr, htons_u(pn->outgoing.peer.port));
 
-    new_state = s_req_lookup;
+        new_state = do_req_lookup(pn);
+
+        printf("dns cache for tcp host: %s\n", pn->outgoing.peer.host);
+
+    } else {
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        if ( 0 != uv_getaddrinfo(pn->loop,
+                                 &pn->outgoing.t.addrinfo_req,
+                                 conn_getaddrinfo_done,
+                                 pn->outgoing.peer.host,
+                                 NULL,
+                                 &hints) ) {
+            new_state = do_kill(pn);
+            BREAK_NOW;
+        }
+
+        pn->outstanding++;
+        conn_timer_reset(&pn->outgoing);
+
+        new_state = s_req_lookup;
+    }
 
 BREAK_LABEL:
 
@@ -341,6 +434,44 @@ BREAK_LABEL:
 
     return ret;
 }
+
+
+
+static int do_dnsovertcp_lookup(PROXY_NODE *pn) {
+    CONN *incoming;
+    CONN *outgoing;
+    int ret;
+
+    incoming = &pn->incoming;
+    outgoing = &pn->outgoing;
+
+    if ( outgoing->result < 0 ) {
+        ssnetio_on_msg(1, "%4d Lookup Error For %s : %s",
+                       pn->index,
+                       outgoing->peer.host,
+                       uv_strerror((int)outgoing->result));
+
+        ret = do_kill(pn);
+        BREAK_NOW;
+    }
+
+    ASSERT(c_stop == incoming->rdstate);
+    ASSERT(c_stop == incoming->wrstate);
+    ASSERT(c_stop == outgoing->rdstate);
+    ASSERT(c_stop == outgoing->wrstate);
+
+    ASSERT(AF_INET == outgoing->t.addr.sa_family ||
+           AF_INET6 == outgoing->t.addr.sa_family);
+
+
+
+    ret = s_req_connect;
+
+BREAK_LABEL:
+
+    return ret;
+}
+
 
 static int do_req_connect(PROXY_NODE *pn) {
     CONN *incoming;
@@ -512,7 +643,11 @@ static void dgram_lookup(DGRAMS *dgrams) {
         /* Lookup dns cache */
         dnsc = dnsc_find(dgrams->peer.host);
         if ( dnsc ) {
-            cpy_sockaddr(&dnsc->t.addr, &dgrams->remote.addr);
+            if ( dnsc->ipv4_valid ) {
+                cpy_sockaddr(&dnsc->ipv4.addr, &dgrams->remote.addr);
+            } else {
+                cpy_sockaddr(&dnsc->ipv6.addr, &dgrams->remote.addr);
+            }
             set_sockaddr_port(&dgrams->remote.addr, ntohs_u(dgrams->peer.port));
 
             dgram_read_remote(dgrams);
@@ -541,14 +676,29 @@ static void dgram_lookup(DGRAMS *dgrams) {
 static void dgram_getaddrinfo_done(
     uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     DGRAMS *dgrams;
+    struct addrinfo *ai;
+    struct addrinfo *ai_ipv4 = NULL;
+    struct addrinfo *ai_ipv6 = NULL;
 
     dgrams = CONTAINER_OF(req, DGRAMS, req_dns);
 
     if ( 0 == status ) {
-        cpy_sockaddr(addrs->ai_addr, &dgrams->remote.addr);
+        for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
+            if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
+                ai_ipv4 = ai;
+            }
+            if ( AF_INET6 == ai->ai_family && !ai_ipv6 ) {
+                ai_ipv6 = ai;
+            }
+        }
+
+        cpy_sockaddr(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &dgrams->remote.addr);
         set_sockaddr_port(&dgrams->remote.addr, ntohs_u(dgrams->peer.port));
 
-        dnsc_add(dgrams->peer.host, addrs->ai_addr);
+        dnsc_add(
+            dgrams->peer.host,
+            ai_ipv4 ? ai_ipv4->ai_addr : NULL,
+            ai_ipv6 ? ai_ipv6->ai_addr : NULL);
         dgram_read_remote(dgrams);
         dgram_send_remote(dgrams);
     } else {

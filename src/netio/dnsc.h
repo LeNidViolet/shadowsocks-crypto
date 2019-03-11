@@ -35,12 +35,20 @@ typedef struct {
         struct sockaddr_in6 addr6;
         struct sockaddr_in addr4;
         struct sockaddr addr;
-    }t;
+    }ipv4;
+    int ipv4_valid;
+
+    union{
+        struct sockaddr_in6 addr6;
+        struct sockaddr_in addr4;
+        struct sockaddr addr;
+    }ipv6;
+    int ipv6_valid;
 } DNSC;
 
 int dnsc_init(void);
 DNSC *dnsc_find(const char *host);
-DNSC *dnsc_add(const char *host, struct sockaddr *addr);
+DNSC *dnsc_add(const char *host, struct sockaddr *addr_v4, struct sockaddr *addr_v6);
 void dnsc_remove(DNSC *dnsc);
 void dnsc_clear(void);
 
