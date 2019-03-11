@@ -5,9 +5,8 @@
 #include "parsedns.h"
 #include "shadowsocks-crypto/comm.h"
 
-unsigned long __cdecl ByteswapUlong(unsigned long i)
-{
-	unsigned long j;
+unsigned int ByteswapUInt32(unsigned int i) {
+	unsigned int j;
 	j = (i << 24);
 	j += (i << 8) & 0x00FF0000;
 	j += (i >> 8) & 0x0000FF00;
@@ -15,8 +14,7 @@ unsigned long __cdecl ByteswapUlong(unsigned long i)
 	return j;
 }
 
-unsigned short __cdecl ByteswapUshort(unsigned short i)
-{
+unsigned short ByteswapUshort(unsigned short i) {
 	unsigned short j;
 	j = (i << 8);
 	j += (i >> 8);
@@ -36,8 +34,8 @@ PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen) {
 	PDNS_HEADER hdr = (PDNS_HEADER)data;
 	if ( hdr->Truncation ) BREAK_NOW;
 
-	WORD questionCount = ByteswapUshort(hdr->QuestionCount);
-	WORD answerCount = ByteswapUshort(hdr->AnswerCount);
+	unsigned short questionCount = ByteswapUshort(hdr->QuestionCount);
+	unsigned short answerCount = ByteswapUshort(hdr->AnswerCount);
 	if ( questionCount != 1 ) BREAK_NOW;
 
 	unsigned char dn[DNS_MAXDN] = {0};
@@ -49,7 +47,7 @@ PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen) {
 	int ret = dns_getdn(pkt, &cur, end, dn, sizeof(dn));
 	if ( ret <= 0 ) BREAK_NOW;
 
-	unsigned long totalLen = sizeof(DNS_PARSE) + answerCount * sizeof(DNS_ANSWER);
+	unsigned int totalLen = sizeof(DNS_PARSE) + answerCount * sizeof(DNS_ANSWER);
 	result = (PDNS_PARSE)calloc(1, totalLen);
 	BREAK_ON_NULL(result);
 
@@ -89,17 +87,17 @@ PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen) {
 				rr.dnsrr_cls == DNS_C_IN &&
 				(rr.dnsrr_typ == DNS_T_A || rr.dnsrr_typ == DNS_T_CNAME || rr.dnsrr_typ == DNS_T_AAAA)
 				) {
-				thisAnswer->type = (WORD)rr.dnsrr_typ;
-				thisAnswer->_class = (WORD)rr.dnsrr_cls;
-				thisAnswer->ttl = (DWORD)rr.dnsrr_ttl;
-				thisAnswer->rdataLen = (WORD)rr.dnsrr_dsz;
+				thisAnswer->type = (unsigned short)rr.dnsrr_typ;
+				thisAnswer->_class = (unsigned short)rr.dnsrr_cls;
+				thisAnswer->ttl = (unsigned int)rr.dnsrr_ttl;
+				thisAnswer->rdataLen = (unsigned short)rr.dnsrr_dsz;
 
 				ret = dns_dntop(rr.dnsrr_dn, thisAnswer->name, sizeof(thisAnswer->name));
 				if ( ret > 0 ) {
 					if ( rr.dnsrr_typ == DNS_T_A ) {
-						if ( rr.dnsrr_dsz == sizeof(DWORD) ) {
-							thisAnswer->rdata.ip = *(DWORD*)rr.dnsrr_dptr;
-							thisAnswer->rdata.ip = ByteswapUlong(thisAnswer->rdata.ip);
+						if ( rr.dnsrr_dsz == sizeof(unsigned int) ) {
+							thisAnswer->rdata.ip = *(unsigned int*)rr.dnsrr_dptr;
+							thisAnswer->rdata.ip = ByteswapUInt32(thisAnswer->rdata.ip);
 
 							thisAnswer++;
 							result->answerCount++;

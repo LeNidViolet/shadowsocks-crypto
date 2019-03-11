@@ -2,62 +2,36 @@
 
 #pragma once
 
-
-typedef unsigned long	DWORD;
-typedef unsigned short	WORD;
-typedef unsigned char	BYTE;
-
-
-
 #pragma pack(push, 1)
 
 typedef struct _DNS_HEADER{
-	WORD    Xid;
+	unsigned short		Xid;
 
-	BYTE    RecursionDesired : 1;
-	BYTE    Truncation : 1;			// 数据包是被截断的
-	BYTE    Authoritative : 1;
-	BYTE    Opcode : 4;
-	BYTE    IsResponse : 1;
+	unsigned char		RecursionDesired : 1;
+	unsigned char		Truncation : 1;			// 数据包是被截断的
+	unsigned char		Authoritative : 1;
+	unsigned char		Opcode : 4;
+	unsigned char		IsResponse : 1;
 
-	BYTE    ResponseCode : 4;
-	BYTE    CheckingDisabled : 1;
-	BYTE    AuthenticatedData : 1;
-	BYTE    Reserved : 1;
-	BYTE    RecursionAvailable : 1;
+	unsigned char		ResponseCode : 4;
+	unsigned char		CheckingDisabled : 1;
+	unsigned char		AuthenticatedData : 1;
+	unsigned char		Reserved : 1;
+	unsigned char		RecursionAvailable : 1;
 
-	WORD    QuestionCount;
-	WORD    AnswerCount;
-	WORD    NameServerCount;
-	WORD    AdditionalCount;
+	unsigned short		QuestionCount;
+	unsigned short		AnswerCount;
+	unsigned short		NameServerCount;
+	unsigned short		AdditionalCount;
 }DNS_HEADER, *PDNS_HEADER;
-
-
-#define DNS_HEADER_FLAGS(pHead)     ( *((PWORD)(pHead)+1) )
-
-#define DNS_OFFSET_TO_QUESTION_NAME     sizeof(DNS_HEADER)
-
-//  Question immediately follows header so compressed question name
-//      0xC000 | sizeof(DNS_HEADER)
-
-#define DNS_COMPRESSED_QUESTION_NAME  (0xC00C)
-
-
-
-//  Packet extraction macros
-#define DNS_QUESTION_NAME_FROM_HEADER( _pHeader_ ) \
-            ( (PCHAR)( (PDNS_HEADER)(_pHeader_) + 1 ) )
-
-
-
 
 //  DNS Question
 
 typedef struct _DNS_WIRE_QUESTION{
 	//  Preceded by question name
 
-	WORD    QuestionType;
-	WORD    QuestionClass;
+	unsigned short		QuestionType;
+	unsigned short		QuestionClass;
 }DNS_WIRE_QUESTION, *PDNS_WIRE_QUESTION;
 
 
@@ -66,10 +40,10 @@ typedef struct _DNS_WIRE_QUESTION{
 typedef struct _DNS_WIRE_RECORD{
 	//  Preceded by record owner name
 
-	WORD    RecordType;
-	WORD    RecordClass;
-	DWORD   TimeToLive;
-	WORD    DataLength;
+	unsigned short		RecordType;
+	unsigned short		RecordClass;
+	unsigned int		TimeToLive;
+	unsigned short		DataLength;
 
 	//  Followed by record data
 }DNS_WIRE_RECORD, *PDNS_WIRE_RECORD;
@@ -81,16 +55,16 @@ typedef struct _DNS_WIRE_RECORD{
 #endif
 
 typedef struct DNS_ANSWER_{
-	char				name[DNS_MAXDN];
-	WORD				type;
-	WORD				_class;
-	DWORD				ttl;
-	WORD				rdataLen;
+	char						name[DNS_MAXDN];
+	unsigned short				type;
+	unsigned short				_class;
+	unsigned int				ttl;
+	unsigned short				rdataLen;
 
 	union
 	{
 		char			data[DNS_MAXDN];
-		DWORD			ip;
+		unsigned int	ip;
 		uint8_t 		ipV6[16];
 	}rdata;
 }DNS_ANSWER, *PDNS_ANSWER;
@@ -101,14 +75,17 @@ typedef struct DNS_PARSE_{
 	DNS_HEADER			dnsHdr;
 
 	char				queryDomain[DNS_MAXDN];
-	WORD				queryType;
-	WORD				queryClass;
+	unsigned short		queryType;
+	unsigned short		queryClass;
 
-	DWORD				parseLen;
-	
-	WORD				answerCount;
+	unsigned int		parseLen;
+
+	unsigned short		answerCount;
 	PDNS_ANSWER			answers;
 }DNS_PARSE, *PDNS_PARSE;
 
 
 PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen);
+
+unsigned int ByteswapUInt32(unsigned int i);
+unsigned short ByteswapUshort(unsigned short i);
