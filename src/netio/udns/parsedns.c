@@ -22,7 +22,7 @@ unsigned short ByteswapUshort(unsigned short i) {
 }
 
 
-PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen) {
+PDNS_PARSE ParseDnsRecord(const char* data, unsigned int dataLen) {
 
 	PDNS_PARSE			result = NULL;
 	int					errCode = -1;

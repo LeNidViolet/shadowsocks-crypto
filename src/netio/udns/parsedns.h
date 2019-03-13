@@ -54,6 +54,9 @@ typedef struct _DNS_WIRE_RECORD{
 #define DNS_MAXDN	255	/* max DN length */
 #endif
 
+#define DNS_QUERY_TYPE_IPV4		1
+#define DNS_QUERY_TYPE_IPV6		28
+
 typedef struct DNS_ANSWER_{
 	char						name[DNS_MAXDN];
 	unsigned short				type;
@@ -85,7 +88,7 @@ typedef struct DNS_PARSE_{
 }DNS_PARSE, *PDNS_PARSE;
 
 
-PDNS_PARSE ParseDnsRecord(const char* data, unsigned long dataLen);
+PDNS_PARSE ParseDnsRecord(const char* data, unsigned int dataLen);
 
 unsigned int ByteswapUInt32(unsigned int i);
 unsigned short ByteswapUshort(unsigned short i);

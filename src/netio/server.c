@@ -274,7 +274,7 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
     // DNS OVER TCP 前两字节指示包长
     parse = ParseDnsRecord(
         incoming->ss_buf.data_base + 2,
-        incoming->ss_buf.data_len - 2);
+        (unsigned int)incoming->ss_buf.data_len - 2);
     if ( parse ) {
 
         strcpy(pn->outgoing.peer.host, parse->queryDomain);
@@ -282,7 +282,7 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
         if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, 53, &addr.addr4) ||
              0 == uv_ip6_addr(pn->outgoing.peer.host, 53, &addr.addr6)) {
             // TODO: IPV4 ONLY FOR NOW
-            ASSERT(parse->queryType == 1);
+            ASSERT(parse->queryType == DNS_QUERY_TYPE_IPV4);
 
             do_dnsovertcp_packback(pn, &addr.addr);
             new_state = s_kill;
@@ -292,7 +292,7 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
         dnsc = dnsc_find(parse->queryDomain);
         if ( dnsc ) {
             // TODO: IPV4 ONLY FOR NOW
-            ASSERT(parse->queryType == 1);
+            ASSERT(parse->queryType == DNS_QUERY_TYPE_IPV4);
             ASSERT(dnsc->ipv4_valid);
 
             do_dnsovertcp_packback(pn, &dnsc->ipv4.addr);

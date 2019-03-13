@@ -87,8 +87,6 @@ DNSC *dnsc_add(const char *host, struct sockaddr *addr_v4, struct sockaddr *addr
             ret->ipv6_valid = 1;
         }
 
-        printf("DNSC ADD %s\n", ret->host);
-
         InsertTailList(&dnsc_list, &ret->list);
 
         dnsc_outstanding++;

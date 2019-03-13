@@ -134,6 +134,34 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         }
         CHECK(0 == dgram_read_local(udp_handle));
 
+
+        /* dns bind */
+        ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
+        CHECK(0 == uv_udp_init(loop, udp_handle));
+
+        if ( AF_INET == ai->ai_family ) {
+            s.addr4.sin_port = htons_u(DNS_LISTEN_PORT);
+        }
+        else if ( AF_INET6 == ai->ai_family ) {
+            s.addr6.sin6_port = htons_u(DNS_LISTEN_PORT);
+        }
+        else {
+            UNREACHABLE();
+        }
+
+        ret = uv_udp_bind(udp_handle, &s.addr, 0);
+        if ( 0 != ret ) {
+            ssnetio_on_msg(
+                1,
+                "dns bind to %s:%d failed: %s",
+                address.host,
+                DNS_LISTEN_PORT,
+                uv_strerror(ret));
+            BREAK_NOW;
+        }
+        CHECK(0 == dnssrv_read_local(udp_handle));
+
+
         ssnetio_on_bind(address.host, address.port);
     }
 
@@ -535,10 +563,11 @@ static void loop_walk_cb(uv_handle_t* handle, void* arg) {
     } else if ( UV_UDP == type ) {
         ss_buf = uv_handle_get_data(handle);
 
-        ASSERT(ss_buf);
-        ASSERT(ss_buf->buf_base);
-        free(ss_buf->buf_base);
-        free(ss_buf);
+        if ( ss_buf ) {
+            ASSERT(ss_buf->buf_base);
+            free(ss_buf->buf_base);
+            free(ss_buf);
+        }
 
         uv_close(handle, loop_walk_close_done);
     } else {

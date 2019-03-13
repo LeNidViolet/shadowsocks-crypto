@@ -179,6 +179,7 @@ void conn_timer_reset(CONN *conn);
 int conn_cycle(const char *who, CONN *a, CONN *b);
 
 int dgram_read_local(uv_udp_t *handle);
+int dnssrv_read_local(uv_udp_t *handle);
 
 int do_proxy_start(PROXY_NODE *pn);
 int do_proxy(CONN *sender);
