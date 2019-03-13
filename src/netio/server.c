@@ -262,6 +262,11 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
     struct addrinfo hints;
     DNSC *dnsc;
     PDNS_PARSE parse = NULL;
+    union{
+        struct sockaddr_in6 addr6;
+        struct sockaddr_in addr4;
+        struct sockaddr addr;
+    }addr;
 
     incoming = &pn->incoming;
     assert(0 != incoming->ss_buf.data_len);
@@ -271,6 +276,19 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
         incoming->ss_buf.data_base + 2,
         incoming->ss_buf.data_len - 2);
     if ( parse ) {
+
+        strcpy(pn->outgoing.peer.host, parse->queryDomain);
+
+        if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, 53, &addr.addr4) ||
+             0 == uv_ip6_addr(pn->outgoing.peer.host, 53, &addr.addr6)) {
+            // TODO: IPV4 ONLY FOR NOW
+            ASSERT(parse->queryType == 1);
+
+            do_dnsovertcp_packback(pn, &addr.addr);
+            new_state = s_kill;
+            BREAK_NOW;
+        }
+
         dnsc = dnsc_find(parse->queryDomain);
         if ( dnsc ) {
             // TODO: IPV4 ONLY FOR NOW
@@ -285,7 +303,7 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
             hints.ai_socktype = SOCK_STREAM;
             hints.ai_protocol = IPPROTO_TCP;
 
-            strcpy(pn->outgoing.peer.host, parse->queryDomain);
+
             if ( 0 != uv_getaddrinfo(pn->loop,
                                      &pn->outgoing.t.addrinfo_req,
                                      conn_getaddrinfo_done,
@@ -352,6 +370,14 @@ static int do_handshake(PROXY_NODE *pn) {
         BREAK_NOW;
     }
 
+    /* Maybe it's a ip address in string form */
+    if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr4) ||
+         0 == uv_ip6_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr6)) {
+
+        new_state = do_req_lookup(pn);
+        BREAK_NOW;
+    }
+
     dnsc = dnsc_find(pn->outgoing.peer.host);
     if ( dnsc ) {
         if ( dnsc->ipv4_valid ) {
@@ -362,8 +388,6 @@ static int do_handshake(PROXY_NODE *pn) {
         set_sockaddr_port(&pn->outgoing.t.addr, htons_u(pn->outgoing.peer.port));
 
         new_state = do_req_lookup(pn);
-
-        printf("dns cache for tcp host: %s\n", pn->outgoing.peer.host);
 
     } else {
         memset(&hints, 0, sizeof(hints));
