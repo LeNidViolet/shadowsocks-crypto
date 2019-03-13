@@ -62,13 +62,10 @@ static void dnssrv_alloc_cb(
 void dnssrv_send_done(uv_udp_send_t *req, int status) {
     DNSSRV_MEM_BLOCK *block;
 
+    (void)status;
     block = CONTAINER_OF(req, DNSSRV_MEM_BLOCK, req.send_req);
 
-    if ( 0 != status ) {
-
-    }
-
-//    free(block);
+    free(block);
 }
 
 
@@ -98,7 +95,7 @@ static void dnssrv_response(
                                         (unsigned short)4 : (unsigned short)16);
 
     pos = (char*)(record + 1);
-    if ( block->query_type == DNS_QUERY_TYPE_IPV4 ) {
+    if ( DNS_QUERY_TYPE_IPV4 == block->query_type ) {
         struct sockaddr_in *addr_ipv4 = (struct sockaddr_in *)result;
         *(unsigned int*)pos = addr_ipv4->sin_addr.s_addr;
 
@@ -111,17 +108,17 @@ static void dnssrv_response(
     }
 
     sndbuf = uv_buf_init(block->buf, response_len);
-    if( uv_udp_send(
+
+    int ret = uv_udp_send(
         &block->req.send_req,
         block->handle,
         &sndbuf,
         1,
         &block->client_addr.addr,
-        dnssrv_send_done)) {
-
+        dnssrv_send_done);
+    if ( 0 == ret ) {
 
     } else {
-        printf("uv_udp_send failed\n");
         free(block);
     }
 }
@@ -147,8 +144,6 @@ static void dnssrv_getaddrinfo_done(
             }
         }
 
-        printf("DNS RESOLVE GETADDR DONE: %s\n", block->domain);
-
         dnsc_add(
             block->domain,
             ai_ipv4 ? ai_ipv4->ai_addr : NULL,
@@ -156,10 +151,11 @@ static void dnssrv_getaddrinfo_done(
 
         if ( block->query_type == DNS_QUERY_TYPE_IPV4 && ai_ipv4 ) {
             dnssrv_response(block, ai_ipv4->ai_addr);
-
         } else if ( block->query_type == DNS_QUERY_TYPE_IPV6 && ai_ipv6 ) {
             dnssrv_response(block, ai_ipv6->ai_addr);
-
+        } else {
+            // impossible
+            free(block);
         }
     } else {
         free(block);
@@ -197,8 +193,6 @@ static void dnssrv_read_done(
         BREAK_NOW;
     }
 
-    printf("DNS RESOLVE BEGIN: %s\n", parse->queryDomain);
-
     // TODO: ONLY CLASS IN + IPV4 IPV6 ONLY FOR NOW
     if ( parse->queryClass != 1 ||
         (parse->queryType != DNS_QUERY_TYPE_IPV4 && parse->queryType != DNS_QUERY_TYPE_IPV6) ) {
@@ -214,13 +208,9 @@ static void dnssrv_read_done(
     cache = dnsc_find(parse->queryDomain);
     if ( cache ) {
         if ( parse->queryType == DNS_QUERY_TYPE_IPV4 && cache->ipv4_valid ) {
-            printf("DNS RESOLVE CACHE IPV4: %s\n", parse->queryDomain);
-
             dnssrv_response(block, &cache->ipv4.addr);
             lookup = 0;
         } else if ( parse->queryType == DNS_QUERY_TYPE_IPV6 && cache->ipv6_valid ) {
-            printf("DNS RESOLVE CACHE IPV6: %s\n", parse->queryDomain);
-
             dnssrv_response(block, &cache->ipv6.addr);
             lookup = 0;
         }
