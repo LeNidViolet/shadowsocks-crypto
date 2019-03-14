@@ -374,6 +374,12 @@ static int do_handshake(PROXY_NODE *pn) {
     if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr4) ||
          0 == uv_ip6_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr6)) {
 
+        dnsc = dnsc_find_ip(&pn->outgoing.t.addr, &pn->outgoing.t.addr);
+        if ( dnsc ) {
+            memset(pn->outgoing.peer.host, 0, sizeof(pn->outgoing.peer.host));
+            strcpy(pn->outgoing.peer.host, dnsc->host);
+        }
+
         new_state = do_req_lookup(pn);
         BREAK_NOW;
     }
@@ -699,6 +705,12 @@ static void dgram_lookup(DGRAMS *dgrams) {
     /* Maybe it's a ip address in string form */
     if ( 0 == uv_ip4_addr(dgrams->peer.host, dgrams->peer.port, &dgrams->remote.addr4) ||
          0 == uv_ip6_addr(dgrams->peer.host, dgrams->peer.port, &dgrams->remote.addr6)) {
+
+        dnsc = dnsc_find_ip(&dgrams->remote.addr, &dgrams->remote.addr);
+        if ( dnsc ) {
+            memset(dgrams->peer.host, 0, sizeof(dgrams->peer.host));
+            strcpy(dgrams->peer.host, dnsc->host);
+        }
 
         dgram_read_remote(dgrams);
         dgram_send_remote(dgrams);

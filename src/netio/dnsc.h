@@ -29,7 +29,7 @@
 typedef struct {
     LIST_ENTRY list;
 
-    char host[256];
+    char host[64];
 
     union{
         struct sockaddr_in6 addr6;
@@ -48,7 +48,8 @@ typedef struct {
 
 int dnsc_init(void);
 DNSC *dnsc_find(const char *host);
-DNSC *dnsc_add(const char *host, struct sockaddr *addr_v4, struct sockaddr *addr_v6);
+DNSC *dnsc_find_ip(const struct sockaddr *addr_v4, const struct sockaddr *addr_v6);
+DNSC *dnsc_add(const char *host, const struct sockaddr *addr_v4, const struct sockaddr *addr_v6);
 void dnsc_remove(DNSC *dnsc);
 void dnsc_clear(void);
 

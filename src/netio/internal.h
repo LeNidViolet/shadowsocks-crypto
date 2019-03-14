@@ -127,7 +127,7 @@ typedef struct PROXY_NODE {
 /* URIL.C */
 int str_sockaddr(const struct sockaddr *addr, ADDRESS *addr_s);
 void cpy_sockaddr(const struct sockaddr *src, struct sockaddr *dst);
-int equal_sockaddr(const struct sockaddr *src, struct sockaddr *dst);
+int equal_sockaddr(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
 void set_sockaddr_port(struct sockaddr *addr, unsigned short port);
 int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s);
 

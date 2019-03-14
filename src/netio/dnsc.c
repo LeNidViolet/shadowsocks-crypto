@@ -58,7 +58,36 @@ BREAK_LABEL:
     return ret;
 }
 
-DNSC *dnsc_add(const char *host, struct sockaddr *addr_v4, struct sockaddr *addr_v6) {
+DNSC *dnsc_find_ip(const struct sockaddr *addr_v4, const struct sockaddr *addr_v6) {
+    DNSC *ret = NULL, *dnsc;
+    int equal;
+
+    for ( LIST_ENTRY *next = dnsc_list.Blink; next != &dnsc_list ; next = next->Blink ) {
+        dnsc = CONTAINER_OF(next, DNSC, list);
+
+        if ( dnsc->ipv4_valid && addr_v4 ) {
+            equal = equal_sockaddr(&dnsc->ipv4.addr, addr_v4, 0);
+            if ( equal ) {
+                ret = dnsc;
+                BREAK_NOW;
+            }
+        }
+
+        if ( dnsc->ipv6_valid && addr_v6 ) {
+            equal = equal_sockaddr(&dnsc->ipv6.addr, addr_v6, 0);
+            if ( equal ) {
+                ret = dnsc;
+                BREAK_NOW;
+            }
+        }
+    }
+
+BREAK_LABEL:
+
+    return ret;
+}
+
+DNSC *dnsc_add(const char *host, const struct sockaddr *addr_v4, const struct sockaddr *addr_v6) {
     DNSC *ret = NULL;
 
     BREAK_ON_NULL(host);

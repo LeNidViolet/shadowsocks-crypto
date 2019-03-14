@@ -29,7 +29,7 @@
 typedef struct DNSSRV_MEM_BLOCK_{
     char buf[512];
 
-    char domain[256];
+    char domain[64];
     unsigned short query_type;
     unsigned int query_len;
     union {

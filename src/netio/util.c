@@ -70,8 +70,8 @@ void cpy_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
     }
 }
 
-int equal_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
-    int ret = -1;
+int equal_sockaddr(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port) {
+    int ret = 0;
     const struct sockaddr_in6 *in6s;
     const struct sockaddr_in *ins;
     const struct sockaddr_in6 *in6d;
@@ -84,8 +84,11 @@ int equal_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
     case AF_INET:
         ins = (const struct sockaddr_in *)src;
         ind = (const struct sockaddr_in *)dst;
-        if ( ins->sin_port != ind->sin_port )
-            BREAK_NOW;
+        if ( cmp_port ) {
+            if ( ins->sin_port != ind->sin_port )
+                BREAK_NOW;
+        }
+
         if ( ins->sin_addr.s_addr != ind->sin_addr.s_addr )
             BREAK_NOW;
         break;
@@ -93,8 +96,11 @@ int equal_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
     case AF_INET6:
         in6s = (const struct sockaddr_in6 *)src;
         in6d = (const struct sockaddr_in6 *)dst;
-        if ( in6s->sin6_port != in6d->sin6_port )
-            BREAK_NOW;
+        if ( cmp_port ) {
+            if ( in6s->sin6_port != in6d->sin6_port )
+                BREAK_NOW;
+        }
+
         if ( 0 != memcmp(&in6s->sin6_addr, &in6d->sin6_addr, sizeof(in6s->sin6_addr)) )
             BREAK_NOW;
         break;
@@ -104,7 +110,7 @@ int equal_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
         break;
     }
 
-    ret = 0;
+    ret = 1;
 BREAK_LABEL:
 
     return ret;
