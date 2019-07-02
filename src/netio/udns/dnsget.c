@@ -560,7 +560,7 @@ static void dnscb(struct dns_ctx *ctx, void *result, void *data) {
   query_free(q);
 }
 
-int main(int argc, char **argv) {
+int main1(int argc, char **argv) {
   int i;
   int fd;
   fd_set fds;

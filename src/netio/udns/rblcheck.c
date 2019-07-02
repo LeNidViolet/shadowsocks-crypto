@@ -281,7 +281,7 @@ static void waitdns(struct ipcheck *ipc) {
   }
 }
 
-int main(int argc, char **argv) {
+int main2(int argc, char **argv) {
   int c;
   struct ipcheck ipc;
   char *nameserver = NULL;
