@@ -43,7 +43,7 @@ SET(SHADOWSOCKSNETIO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/util.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/flow.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dgramsc.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dnsc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dns_cache.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/s5.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/handler.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dnssrv.c

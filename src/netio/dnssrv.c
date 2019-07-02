@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 #include "uv.h"
-#include "dnsc.h"
+#include "dns_cache.h"
 #include "internal.h"
 #include "udns/parsedns.h"
 
@@ -136,6 +136,8 @@ static void dnssrv_getaddrinfo_done(
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
+            dns_cache_add(block->domain, ai->ai_addr);
+
             if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
                 ai_ipv4 = ai;
             }
@@ -143,11 +145,6 @@ static void dnssrv_getaddrinfo_done(
                 ai_ipv6 = ai;
             }
         }
-
-        dnsc_add(
-            block->domain,
-            ai_ipv4 ? ai_ipv4->ai_addr : NULL,
-            ai_ipv6 ? ai_ipv6->ai_addr : NULL);
 
         if ( block->query_type == DNS_QUERY_TYPE_IPV4 && ai_ipv4 ) {
             dnssrv_response(block, ai_ipv4->ai_addr);
@@ -173,7 +170,8 @@ static void dnssrv_read_done(
 
     DNS_PARSE *parse = NULL;
     uv_loop_t *loop;
-    DNSC *cache = NULL;
+    struct sockaddr* addr;
+    int req_ipv4;
     DNSSRV_MEM_BLOCK *block = NULL;
     int lookup = 1;
     struct addrinfo hints;
@@ -205,15 +203,12 @@ static void dnssrv_read_done(
     block->query_type = parse->queryType;
     cpy_sockaddr(clientaddr, &block->client_addr.addr);
 
-    cache = dnsc_find(parse->queryDomain);
-    if ( cache ) {
-        if ( parse->queryType == DNS_QUERY_TYPE_IPV4 && cache->ipv4_valid ) {
-            dnssrv_response(block, &cache->ipv4.addr);
-            lookup = 0;
-        } else if ( parse->queryType == DNS_QUERY_TYPE_IPV6 && cache->ipv6_valid ) {
-            dnssrv_response(block, &cache->ipv6.addr);
-            lookup = 0;
-        }
+    req_ipv4 = DNS_QUERY_TYPE_IPV4 == parse->queryType ? 1 : 0;
+
+    addr = dns_cache_find_ip(parse->queryDomain, req_ipv4);
+    if ( addr ) {
+        dnssrv_response(block, addr);
+        lookup = 0;
     }
 
     if ( lookup ) {

@@ -20,37 +20,39 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef SHADOWSOCKS_NETIO_DNSC_H
-#define SHADOWSOCKS_NETIO_DNSC_H
+#ifndef SHADOWSOCKS_NETIO_DNS_CACHE_H
+#define SHADOWSOCKS_NETIO_DNS_CACHE_H
 
 #include <netinet/in.h>
 #include "shadowsocks-crypto/list.h"
+
+struct dns_cache_ip;
+typedef struct {
+    struct dns_cache_ip *next;
+    union{
+        struct sockaddr_in6 addr6;
+        struct sockaddr_in addr4;
+        struct sockaddr addr;
+    } addr;
+} dns_cache_ip;
 
 typedef struct {
     LIST_ENTRY list;
 
     char host[64];
 
-    union{
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    }ipv4;
-    int ipv4_valid;
+    dns_cache_ip *ip;
+} dns_cache_entry;
 
-    union{
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
-    }ipv6;
-    int ipv6_valid;
-} DNSC;
 
-int dnsc_init(void);
-DNSC *dnsc_find(const char *host);
-DNSC *dnsc_find_ip(const struct sockaddr *addr_v4, const struct sockaddr *addr_v6);
-DNSC *dnsc_add(const char *host, const struct sockaddr *addr_v4, const struct sockaddr *addr_v6);
-void dnsc_remove(DNSC *dnsc);
-void dnsc_clear(void);
+int     dns_cache_init(void);
+void    dns_cache_clear(void);
 
-#endif //SHADOWSOCKS_NETIO_DNSC_H
+/* 根据域名查询缓存IP */
+struct sockaddr*    dns_cache_find_ip(const char *host, int req_ipv4);
+/* 根据IP反查域名 */
+const char*         dns_cache_find_host(const struct sockaddr *addr);
+/* 添加新条目 */
+int                 dns_cache_add(const char *host, const struct sockaddr *addr);
+
+#endif //SHADOWSOCKS_NETIO_DNS_CACHE_H

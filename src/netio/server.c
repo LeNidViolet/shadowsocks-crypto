@@ -25,7 +25,7 @@
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 #include "dgramsc.h"
-#include "dnsc.h"
+#include "dns_cache.h"
 #include "udns/parsedns.h"
 
 SSCRYPTO_CTX srv_ctx;
@@ -75,7 +75,7 @@ int ssnetio_server_launch(const SSCRYPTO_CTX *ctx) {
     BREAK_ON_NULL(ctx->config.idel_timeout);
 
     dgrams_init();
-    dnsc_init();
+    dns_cache_init();
 
     memcpy(&srv_ctx, ctx, sizeof(srv_ctx));
     srv_ctx.config.idel_timeout *= 1000;
@@ -83,7 +83,7 @@ int ssnetio_server_launch(const SSCRYPTO_CTX *ctx) {
     ret = server_run(&srv_ctx);
 
     dgrams_clear();
-    dnsc_clear();
+    dns_cache_clear();
 
 BREAK_LABEL:
 
@@ -155,6 +155,8 @@ static void conn_getaddrinfo_done(
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
+            dns_cache_add(outgoing->peer.host, ai->ai_addr);
+
             if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
                 ai_ipv4 = ai;
             }
@@ -165,11 +167,6 @@ static void conn_getaddrinfo_done(
 
         cpy_sockaddr(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &outgoing->t.addr);
         set_sockaddr_port(&outgoing->t.addr, htons_u(outgoing->peer.port));
-
-        dnsc_add(
-            outgoing->peer.host,
-            ai_ipv4 ? ai_ipv4->ai_addr : NULL,
-            ai_ipv6 ? ai_ipv6->ai_addr : NULL);
     }
 
     uv_freeaddrinfo(addrs);
@@ -260,13 +257,13 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
     CONN *incoming;
     int new_state;
     struct addrinfo hints;
-    DNSC *dnsc;
     PDNS_PARSE parse = NULL;
     union{
         struct sockaddr_in6 addr6;
         struct sockaddr_in addr4;
         struct sockaddr addr;
-    }addr;
+    } addru;
+    struct sockaddr *addrp;
 
     incoming = &pn->incoming;
     assert(0 != incoming->ss_buf.data_len);
@@ -279,23 +276,22 @@ static int do_dnsovertcp(PROXY_NODE *pn) {
 
         strcpy(pn->outgoing.peer.host, parse->queryDomain);
 
-        if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, 53, &addr.addr4) ||
-             0 == uv_ip6_addr(pn->outgoing.peer.host, 53, &addr.addr6)) {
+        if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, 53, &addru.addr4) ||
+             0 == uv_ip6_addr(pn->outgoing.peer.host, 53, &addru.addr6)) {
             // TODO: IPV4 ONLY FOR NOW
             ASSERT(parse->queryType == DNS_QUERY_TYPE_IPV4);
 
-            do_dnsovertcp_packback(pn, &addr.addr);
+            do_dnsovertcp_packback(pn, &addru.addr);
             new_state = s_kill;
             BREAK_NOW;
         }
 
-        dnsc = dnsc_find(parse->queryDomain);
-        if ( dnsc ) {
+        addrp = dns_cache_find_ip(parse->queryDomain, 1);
+        if ( addrp ) {
             // TODO: IPV4 ONLY FOR NOW
             ASSERT(parse->queryType == DNS_QUERY_TYPE_IPV4);
-            ASSERT(dnsc->ipv4_valid);
 
-            do_dnsovertcp_packback(pn, &dnsc->ipv4.addr);
+            do_dnsovertcp_packback(pn, addrp);
             new_state = s_kill;
         } else {
             memset(&hints, 0, sizeof(hints));
@@ -335,7 +331,8 @@ static int do_handshake(PROXY_NODE *pn) {
     CONN *incoming;
     int ret, new_state;
     struct addrinfo hints;
-    DNSC *dnsc;
+    const char *host;
+    struct sockaddr* addr;
 
     incoming = &pn->incoming;
 
@@ -374,25 +371,23 @@ static int do_handshake(PROXY_NODE *pn) {
     if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr4) ||
          0 == uv_ip6_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr6)) {
 
-        dnsc = dnsc_find_ip(&pn->outgoing.t.addr, &pn->outgoing.t.addr);
-        if ( dnsc ) {
+        host = dns_cache_find_host(&pn->outgoing.t.addr);
+        if ( host ) {
             memset(pn->outgoing.peer.host, 0, sizeof(pn->outgoing.peer.host));
-            strcpy(pn->outgoing.peer.host, dnsc->host);
+            strcpy(pn->outgoing.peer.host, host);
         }
 
         new_state = do_req_lookup(pn);
         BREAK_NOW;
     }
 
-    dnsc = dnsc_find(pn->outgoing.peer.host);
-    if ( dnsc ) {
-        if ( dnsc->ipv4_valid ) {
-            cpy_sockaddr(&dnsc->ipv4.addr, &pn->outgoing.t.addr);
-        } else {
-            cpy_sockaddr(&dnsc->ipv6.addr, &pn->outgoing.t.addr);
-        }
+    addr = dns_cache_find_ip(pn->outgoing.peer.host, 1);
+    if ( !addr ) {
+        addr = dns_cache_find_ip(pn->outgoing.peer.host, 0);
+    }
+    if ( addr ) {
+        cpy_sockaddr(addr, &pn->outgoing.t.addr);
         set_sockaddr_port(&pn->outgoing.t.addr, htons_u(pn->outgoing.peer.port));
-
         new_state = do_req_lookup(pn);
 
     } else {
@@ -699,30 +694,30 @@ BREAK_LABEL:
 
 static void dgram_lookup(DGRAMS *dgrams) {
     uv_loop_t *loop;
-    DNSC *dnsc;
+    const char* host;
     struct addrinfo hints;
+    struct sockaddr *addr;
 
     /* Maybe it's a ip address in string form */
     if ( 0 == uv_ip4_addr(dgrams->peer.host, dgrams->peer.port, &dgrams->remote.addr4) ||
          0 == uv_ip6_addr(dgrams->peer.host, dgrams->peer.port, &dgrams->remote.addr6)) {
 
-        dnsc = dnsc_find_ip(&dgrams->remote.addr, &dgrams->remote.addr);
-        if ( dnsc ) {
+        host = dns_cache_find_host(&dgrams->remote.addr);
+        if ( host ) {
             memset(dgrams->peer.host, 0, sizeof(dgrams->peer.host));
-            strcpy(dgrams->peer.host, dnsc->host);
+            strcpy(dgrams->peer.host, host);
         }
 
         dgram_read_remote(dgrams);
         dgram_send_remote(dgrams);
     } else {
         /* Lookup dns cache */
-        dnsc = dnsc_find(dgrams->peer.host);
-        if ( dnsc ) {
-            if ( dnsc->ipv4_valid ) {
-                cpy_sockaddr(&dnsc->ipv4.addr, &dgrams->remote.addr);
-            } else {
-                cpy_sockaddr(&dnsc->ipv6.addr, &dgrams->remote.addr);
-            }
+        addr = dns_cache_find_ip(dgrams->peer.host, 1);
+        if ( !addr )
+            addr = dns_cache_find_ip(dgrams->peer.host, 0);
+
+        if ( addr ) {
+            cpy_sockaddr(addr, &dgrams->remote.addr);
             set_sockaddr_port(&dgrams->remote.addr, ntohs_u(dgrams->peer.port));
 
             dgram_read_remote(dgrams);
@@ -759,6 +754,8 @@ static void dgram_getaddrinfo_done(
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
+            dns_cache_add(dgrams->peer.host, ai->ai_addr);
+
             if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
                 ai_ipv4 = ai;
             }
@@ -770,10 +767,6 @@ static void dgram_getaddrinfo_done(
         cpy_sockaddr(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &dgrams->remote.addr);
         set_sockaddr_port(&dgrams->remote.addr, ntohs_u(dgrams->peer.port));
 
-        dnsc_add(
-            dgrams->peer.host,
-            ai_ipv4 ? ai_ipv4->ai_addr : NULL,
-            ai_ipv6 ? ai_ipv6->ai_addr : NULL);
         dgram_read_remote(dgrams);
         dgram_send_remote(dgrams);
     } else {
