@@ -84,7 +84,7 @@ const char* dns_cache_find_host(const struct sockaddr *addr) {
 
         for ( dns_cache_ip *ip = dnsc->ip; NULL != ip ; ip = (dns_cache_ip*)ip->next ) {
             if ( addr->sa_family == ip->addr.addr.sa_family ) {
-                equal = equal_sockaddr(addr, &ip->addr.addr, 0);
+                equal = sockaddr_equal(addr, &ip->addr.addr, 0);
                 if ( equal ) {
                     ret = dnsc->host;
                     break;
@@ -127,7 +127,7 @@ static dns_cache_ip* dns_cache_ip_capture(dns_cache_entry *dnsc, const struct so
 
     for ( dns_cache_ip *ip = dnsc->ip; NULL != ip; ip = (dns_cache_ip*)ip->next ) {
         if ( addr->sa_family == ip->addr.addr.sa_family ) {
-            equal = equal_sockaddr(addr, &ip->addr.addr, 0);
+            equal = sockaddr_equal(addr, &ip->addr.addr, 0);
             if ( equal ) {
                 ret = ip;
                 break;
@@ -166,7 +166,7 @@ int dns_cache_add(const char *host, const struct sockaddr *addr) {
     ENSURE((ip = malloc(sizeof(*ip))) != NULL);
     memset(ip, 0, sizeof(*ip));
 
-    cpy_sockaddr(addr, &ip->addr.addr);
+    sockaddr_cpy(addr, &ip->addr.addr);
 
     ip->next = (struct dns_cache_ip*)dnsc->ip;
     dnsc->ip = ip;

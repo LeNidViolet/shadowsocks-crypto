@@ -114,6 +114,6 @@ enum {
     TERMINATE
 };
 
-#define DNS_LISTEN_PORT         (53)
+#define DNS_LISTEN_PORT         (53u)
 
 #endif //SHADOWSOCKS_CRYPTO_COMM_H

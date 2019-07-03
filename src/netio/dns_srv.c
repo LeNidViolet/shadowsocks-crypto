@@ -201,7 +201,7 @@ static void dnssrv_read_done(
 
     block->handle = handle;
     block->query_type = parse->queryType;
-    cpy_sockaddr(clientaddr, &block->client_addr.addr);
+    sockaddr_cpy(clientaddr, &block->client_addr.addr);
 
     req_ipv4 = DNS_QUERY_TYPE_IPV4 == parse->queryType ? 1 : 0;
 
@@ -241,4 +241,40 @@ BREAK_LABEL:
 
 int dnssrv_read_local(uv_udp_t *handle) {
     return uv_udp_recv_start(handle, dnssrv_alloc_cb, dnssrv_read_done);
+}
+
+int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
+    uv_udp_t *udp_handle;
+    struct sockaddr_in ipv4_addr;
+    int local_loop = 0;
+    int ret;
+
+    if ( !loop ) {
+        loop = uv_default_loop();
+        local_loop = 1;
+    }
+
+    if ( !addr ) {
+        uv_ip4_addr("0.0.0.0", DNS_LISTEN_PORT, &ipv4_addr);
+        addr = (const struct sockaddr*)&ipv4_addr;
+    }
+
+    ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
+    CHECK(0 == uv_udp_init(loop, udp_handle));
+
+    dns_cache_init();
+
+    ret = uv_udp_bind(udp_handle, addr, 0);
+    BREAK_ON_FAILURE(ret);
+
+    CHECK(0 == dnssrv_read_local(udp_handle));
+
+    if ( local_loop ) {
+        ret = uv_run(loop, UV_RUN_DEFAULT);
+        uv_loop_close(loop);
+    }
+
+BREAK_LABEL:
+
+    return ret;
 }

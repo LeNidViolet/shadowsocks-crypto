@@ -165,8 +165,8 @@ static void conn_getaddrinfo_done(
             }
         }
 
-        cpy_sockaddr(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &outgoing->t.addr);
-        set_sockaddr_port(&outgoing->t.addr, htons_u(outgoing->peer.port));
+        sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &outgoing->t.addr);
+        sockaddr_set_port(&outgoing->t.addr, outgoing->peer.port);
     }
 
     uv_freeaddrinfo(addrs);
@@ -386,8 +386,8 @@ static int do_handshake(PROXY_NODE *pn) {
         addr = dns_cache_find_ip(pn->outgoing.peer.host, 0);
     }
     if ( addr ) {
-        cpy_sockaddr(addr, &pn->outgoing.t.addr);
-        set_sockaddr_port(&pn->outgoing.t.addr, htons_u(pn->outgoing.peer.port));
+        sockaddr_cpy(addr, &pn->outgoing.t.addr);
+        sockaddr_set_port(&pn->outgoing.t.addr, pn->outgoing.peer.port);
         new_state = do_req_lookup(pn);
 
     } else {
@@ -661,7 +661,7 @@ void dgram_read_done_local(
     /* Stop recv until all data sent out, or error occur */
     CHECK(0 == uv_udp_recv_stop(handle));
 
-    CHECK(0 == str_sockaddr(addr, &clt_addr));
+    CHECK(0 == sockaddr_to_str(addr, &clt_addr));
     /* unique key */
     snprintf(key, sizeof(key), "%s:%d-%s:%d",
         clt_addr.host, clt_addr.port,
@@ -677,7 +677,7 @@ void dgram_read_done_local(
 
         dgrams = dgrams_add(key, loop);
         dgrams->udp_in = handle;
-        cpy_sockaddr(addr, &dgrams->local.addr);
+        sockaddr_cpy(addr, &dgrams->local.addr);
         dgrams->peer = srv_addr;
         dgrams->ss_buf.buf_base = dgrams->slab;
         dgrams->ss_buf.buf_len = sizeof(dgrams->slab);
@@ -717,8 +717,8 @@ static void dgram_lookup(DGRAMS *dgrams) {
             addr = dns_cache_find_ip(dgrams->peer.host, 0);
 
         if ( addr ) {
-            cpy_sockaddr(addr, &dgrams->remote.addr);
-            set_sockaddr_port(&dgrams->remote.addr, ntohs_u(dgrams->peer.port));
+            sockaddr_cpy(addr, &dgrams->remote.addr);
+            sockaddr_set_port(&dgrams->remote.addr, dgrams->peer.port);
 
             dgram_read_remote(dgrams);
             dgram_send_remote(dgrams);
@@ -764,8 +764,8 @@ static void dgram_getaddrinfo_done(
             }
         }
 
-        cpy_sockaddr(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &dgrams->remote.addr);
-        set_sockaddr_port(&dgrams->remote.addr, ntohs_u(dgrams->peer.port));
+        sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &dgrams->remote.addr);
+        sockaddr_set_port(&dgrams->remote.addr, dgrams->peer.port);
 
         dgram_read_remote(dgrams);
         dgram_send_remote(dgrams);

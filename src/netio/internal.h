@@ -125,10 +125,10 @@ typedef struct PROXY_NODE {
 #define htonl_u(x)          ntohl_u(x)
 
 /* URIL.C */
-int str_sockaddr(const struct sockaddr *addr, ADDRESS *addr_s);
-void cpy_sockaddr(const struct sockaddr *src, struct sockaddr *dst);
-int equal_sockaddr(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
-void set_sockaddr_port(struct sockaddr *addr, unsigned short port);
+int sockaddr_to_str(const struct sockaddr *addr, ADDRESS *addr_s);
+void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst);
+int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
+void sockaddr_set_port(struct sockaddr *addr, unsigned short port);
 int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s);
 
 enum {
@@ -179,7 +179,7 @@ void conn_timer_reset(CONN *conn);
 int conn_cycle(const char *who, CONN *a, CONN *b);
 
 int dgram_read_local(uv_udp_t *handle);
-int dnssrv_read_local(uv_udp_t *handle);
+int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr);
 
 int do_proxy_start(PROXY_NODE *pn);
 int do_proxy(CONN *sender);

@@ -25,7 +25,7 @@
 #include "internal.h"
 #include "s5.h"
 
-int str_sockaddr(const struct sockaddr *addr, ADDRESS *addr_s) {
+int sockaddr_to_str(const struct sockaddr *addr, ADDRESS *addr_s) {
     const struct sockaddr_in6 *in6;
     const struct sockaddr_in *in;
 
@@ -49,7 +49,7 @@ int str_sockaddr(const struct sockaddr *addr, ADDRESS *addr_s) {
     return 0;
 }
 
-void cpy_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
+void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst) {
     const struct sockaddr_in6 *in6;
     const struct sockaddr_in *in;
 
@@ -70,7 +70,7 @@ void cpy_sockaddr(const struct sockaddr *src, struct sockaddr *dst) {
     }
 }
 
-int equal_sockaddr(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port) {
+int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port) {
     int ret = 0;
     const struct sockaddr_in6 *in6s;
     const struct sockaddr_in *ins;
@@ -116,19 +116,19 @@ BREAK_LABEL:
     return ret;
 }
 
-void set_sockaddr_port(struct sockaddr *addr, unsigned short port) {
+void sockaddr_set_port(struct sockaddr *addr, unsigned short port) {
     struct sockaddr_in6 *in6;
     struct sockaddr_in *in;
 
     switch (addr->sa_family) {
     case AF_INET:
         in = (struct sockaddr_in *)addr;
-        in->sin_port = port;
+        in->sin_port = htons_u(port);
         break;
 
     case AF_INET6:
         in6 = (struct sockaddr_in6 *)addr;
-        in6->sin6_port = port;
+        in6->sin6_port = htons_u(port);
         break;
 
     default:
@@ -157,7 +157,7 @@ int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s) {
         UNREACHABLE();
     }
 
-    return str_sockaddr(&s.addr, addr_s);
+    return sockaddr_to_str(&s.addr, addr_s);
 }
 
 

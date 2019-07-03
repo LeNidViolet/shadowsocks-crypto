@@ -83,7 +83,7 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
             UNREACHABLE();
         }
 
-        CHECK(0 == str_sockaddr(&s.addr, &address));
+        CHECK(0 == sockaddr_to_str(&s.addr, &address));
 
         /* tcp bind */
         ENSURE((tcp_handle = malloc(sizeof(*tcp_handle))) != NULL);
@@ -136,20 +136,8 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
 
 
         /* dns bind */
-        ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
-        CHECK(0 == uv_udp_init(loop, udp_handle));
-
-        if ( AF_INET == ai->ai_family ) {
-            s.addr4.sin_port = htons_u(DNS_LISTEN_PORT);
-        }
-        else if ( AF_INET6 == ai->ai_family ) {
-            s.addr6.sin6_port = htons_u(DNS_LISTEN_PORT);
-        }
-        else {
-            UNREACHABLE();
-        }
-
-        ret = uv_udp_bind(udp_handle, &s.addr, 0);
+        sockaddr_set_port(&s.addr, DNS_LISTEN_PORT);
+        ret = dns_server_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
                 1,
@@ -159,8 +147,6 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
                 uv_strerror(ret));
             BREAK_NOW;
         }
-        CHECK(0 == dnssrv_read_local(udp_handle));
-
 
         ssnetio_on_bind(address.host, address.port);
     }
