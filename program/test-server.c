@@ -30,7 +30,7 @@ void on_bind(const char *host, unsigned short port) {
 }
 
 void on_msg(int level, const char *msg) {
-    if ( level < 2 )
+    if ( level <= 2 )
         printf("%d %s\n", level, msg);
 }
 
