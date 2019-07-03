@@ -101,7 +101,7 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
     }
 }
 
-void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id) {
+void sscrypto_on_new_stream(const address *addr, void **ctx, void *stream_id) {
     static int stream_index = 0;
     STREAM_SESSION_CRYP *ss;
 
@@ -124,7 +124,7 @@ void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id) {
     ssn_outstanding++;
 }
 
-void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
+void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx) {
     STREAM_SESSION_CRYP *ss;
 
     ss = (STREAM_SESSION_CRYP *)ctx;
@@ -175,7 +175,7 @@ void sscrypto_on_stream_teardown(void *ctx) {
     ssn_outstanding--;
 }
 
-void sscrypto_on_new_dgram(const ADDRESS_PAIR *addr, void **ctx) {
+void sscrypto_on_new_dgram(const address_pair *addr, void **ctx) {
     static int dgram_index = 0;
     DGRAM_SESSION_CRYP *ds;
 
@@ -215,7 +215,7 @@ void sscrypto_on_dgram_teardown(void *ctx) {
     dsn_outstanding--;
 }
 
-int sscrypto_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx) {
+int sscrypto_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     STREAM_SESSION_CRYP *ss;
     int action = PASS;
 
@@ -249,7 +249,7 @@ void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct,
     }
 }
 
-void sscrypto_on_plain_dgram(const MEM_RANGE *buf, int direct, void *ctx) {
+void sscrypto_on_plain_dgram(const buf_range *buf, int direct, void *ctx) {
     DGRAM_SESSION_CRYP *ds;
 
     ds = (DGRAM_SESSION_CRYP *)ctx;
@@ -260,7 +260,7 @@ void sscrypto_on_plain_dgram(const MEM_RANGE *buf, int direct, void *ctx) {
     }
 }
 
-int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx) {
+int sscrypto_on_stream_encrypt(buf_range *buf, void *ctx) {
     int ret;
     size_t encrypt_len, iv_len;
     unsigned char *pos;
@@ -327,7 +327,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx) {
+int sscrypto_on_stream_decrypt(buf_range *buf, void *ctx) {
     int ret = -1;
     char *pos;
     size_t ret_len, decrypt_len, iv_len;
@@ -385,7 +385,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int sscrypto_on_dgram_encrypt(MEM_RANGE *buf) {
+int sscrypto_on_dgram_encrypt(buf_range *buf) {
     int ret;
     unsigned char iv_encrypt[MAX_CRYPTO_SALT_LEN];
     size_t iv_len;
@@ -438,7 +438,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int sscrypto_on_dgram_decrypt(MEM_RANGE *buf) {
+int sscrypto_on_dgram_decrypt(buf_range *buf) {
     int ret;
     size_t decrypt_len, ret_len, iv_len;
     char *pos;

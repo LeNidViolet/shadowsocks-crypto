@@ -25,10 +25,10 @@
 #include "internal.h"
 
 static void on_tls_send_done(void *param, int direct, int status, void *ctx);
-extern IOCTL_PORT Ioctl;
+extern ioctl Ioctl;
 
 typedef struct {
-    MEM_RANGE mr;
+    buf_range mr;
     size_t snd_len;
     TLS_SESSION *ts;
 } TLS_SND_CTX;

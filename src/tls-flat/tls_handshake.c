@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include "internal.h"
 
-extern IOCTL_PORT Ioctl;
+extern ioctl Ioctl;
 
 int handle_tls_handshake(TLS_SESSION *ts) {
     int ret, action;

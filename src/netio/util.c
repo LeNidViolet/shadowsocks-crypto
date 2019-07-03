@@ -25,7 +25,7 @@
 #include "internal.h"
 #include "s5.h"
 
-int sockaddr_to_str(const struct sockaddr *addr, ADDRESS *addr_s) {
+int sockaddr_to_str(const struct sockaddr *addr, address *addr_s) {
     const struct sockaddr_in6 *in6;
     const struct sockaddr_in *in;
 
@@ -137,7 +137,7 @@ void sockaddr_set_port(struct sockaddr *addr, unsigned short port) {
     }
 }
 
-int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s) {
+int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, address *addr_s) {
     union {
         struct sockaddr_in6 addr6;
         struct sockaddr_in addr4;
@@ -197,7 +197,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int s5_parse_addr(SSNETIO_BUF *buf, ADDRESS *addr) {
+int s5_parse_addr(SSNETIO_BUF *buf, address *addr) {
     s5_ctx parser;
     uint8_t *p;
     size_t len;

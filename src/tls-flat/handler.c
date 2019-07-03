@@ -48,7 +48,7 @@ void tlsflat_plain_stream(STREAM_SESSION *ss, int direct, const char *data, size
 }
 
 /* 对外接口, 应当在TLS连接创建完毕时调用 */
-void tlsflat_on_stream_connection_made(const ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
+void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
     static unsigned int index = 0;
     STREAM_SESSION *ss;
     const int init_size = 1024;
@@ -118,11 +118,11 @@ void tlsflat_on_stream_teardown(void *tls_ctx) {
  * 所以调用者应该根据此函数返回值执行对应操作.
  * 一般来说每个TCP包都需要丢弃掉.
  */
-int tlsflat_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx) {
+int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     STREAM_SESSION *ss;
     TLS_SESSION *ts;
     size_t rm_len, total_len;
-    MEM_RANGE *in;
+    buf_range *in;
     int action;
 
     ss = (STREAM_SESSION*)ctx;

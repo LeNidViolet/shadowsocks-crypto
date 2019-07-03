@@ -75,32 +75,32 @@ if ( !(value) )                                         \
 #define MAX_SS_UDP_FRAME_LEN       (MAX_SS_UDP_PAYLOAD_LEN + MAX_S5_HDR_LEN + MAX_SS_UDP_WRAPPER_LEN)
 
 
-typedef struct ADDRESS{
+typedef struct {
     char host[64];      /* HostName or IpAddress */
     unsigned short port;
-} ADDRESS;
+} address;
 
-typedef struct ADDRESS_PAIR{
-    ADDRESS *local;
-    ADDRESS *remote;
-} ADDRESS_PAIR;
+typedef struct {
+    address *local;
+    address *remote;
+} address_pair;
 
-typedef struct MEM_RANGE{
+typedef struct {
     char *buf_base;
     size_t buf_len;
     char *data_base;
     size_t data_len;
-} MEM_RANGE;
+} buf_range;
 
 typedef void (*write_stream_out_callback)(void* param, int direct, int status, void *ctx);
-typedef struct IOCTL_PORT{
+typedef struct {
     /* Interface for send data out */
     int (*write_stream_out)(
-        MEM_RANGE *buf, int direct, void *stream_id,
+        buf_range *buf, int direct, void *stream_id,
         write_stream_out_callback callback, void *param);
 
     void (*stream_pause)(void *stream_id, int direct, int pause);
-} IOCTL_PORT;
+} ioctl;
 
 enum {
     STREAM_UP,      /* local -> remote */

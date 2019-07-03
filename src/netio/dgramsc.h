@@ -54,7 +54,7 @@ typedef struct {
         struct sockaddr addr;
     } remote;
 
-    ADDRESS peer;
+    address peer;
 
     uv_udp_send_t req_s;
     uv_udp_send_t req_c;

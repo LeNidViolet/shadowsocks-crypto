@@ -46,7 +46,7 @@ void ssnetio_on_bind(const char *host, unsigned short port) {
 }
 
 void ssnetio_on_connection_made(PROXY_NODE *pn) {
-    ADDRESS_PAIR pair;
+    address_pair pair;
 
     pair.local = &pn->incoming.peer;
     pair.remote = &pn->outgoing.peer;
@@ -65,8 +65,8 @@ void ssnetio_on_stream_teardown(PROXY_NODE *pn) {
     sscrypto_on_stream_teardown(pn->ctx);
 }
 
-void ssnetio_on_new_dgram(ADDRESS *local, ADDRESS *remote, void **ctx) {
-    ADDRESS_PAIR pair;
+void ssnetio_on_new_dgram(address *local, address *remote, void **ctx) {
+    address_pair pair;
 
     pair.local = local;
     pair.remote = remote;
@@ -80,7 +80,7 @@ void ssnetio_on_dgram_teardown(void *ctx) {
 
 int ssnetio_on_stream_encrypt(CONN *conn, int offset) {
     int ret;
-    MEM_RANGE mr;
+    buf_range mr;
 
     mr.buf_base = conn->ss_buf.buf_base;
     mr.buf_len = conn->ss_buf.buf_len;
@@ -99,7 +99,7 @@ int ssnetio_on_stream_encrypt(CONN *conn, int offset) {
 
 int ssnetio_on_stream_decrypt(CONN *conn, int offset) {
     int ret;
-    MEM_RANGE mr;
+    buf_range mr;
 
     mr.buf_base = conn->ss_buf.buf_base;
     mr.buf_len = conn->ss_buf.buf_len;
@@ -118,7 +118,7 @@ int ssnetio_on_stream_decrypt(CONN *conn, int offset) {
 
 int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, int offset) {
     int ret;
-    MEM_RANGE mr;
+    buf_range mr;
 
     mr.buf_base = buf->buf_base;
     mr.buf_len = buf->buf_len;
@@ -135,7 +135,7 @@ int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, int offset) {
 
 int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, int offset) {
     int ret;
-    MEM_RANGE mr;
+    buf_range mr;
 
     mr.buf_base = buf->buf_base;
     mr.buf_len = buf->buf_len;
@@ -153,7 +153,7 @@ int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, int offset) {
 int ssnetio_on_plain_stream(CONN *conn) {
     int action;
     int direct = conn == &conn->pn->incoming ? STREAM_UP : STREAM_DOWN;
-    MEM_RANGE mr;
+    buf_range mr;
 
     mr.buf_base = conn->ss_buf.buf_base;
     mr.buf_len = conn->ss_buf.buf_len;
@@ -169,7 +169,7 @@ int ssnetio_on_plain_stream(CONN *conn) {
 }
 
 void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
-    MEM_RANGE mr;
+    buf_range mr;
 
     mr.buf_base = buf->buf_base;
     mr.buf_len = buf->buf_len;
@@ -184,7 +184,7 @@ void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
 
 /* SERVER SIDE ONLY */
 int ssnetio_write_stream_out(
-    MEM_RANGE *buf, int direct, void *stream_id,
+    buf_range *buf, int direct, void *stream_id,
     write_stream_out_callback callback, void *param) {
     int ret = -1;
     PROXY_NODE *pn;

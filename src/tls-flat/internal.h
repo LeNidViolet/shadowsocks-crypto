@@ -44,8 +44,8 @@ typedef struct TLS_SESSION_{
     mbedtls_ssl_context ssl;
     int tls_state;
 
-    MEM_RANGE buf_in;
-    MEM_RANGE buf_out;
+    buf_range buf_in;
+    buf_range buf_out;
     int is_local;
     int wrstate;
     int wait_ack_len;
@@ -53,8 +53,8 @@ typedef struct TLS_SESSION_{
 
 typedef struct STREAM_SESSION_{
     unsigned int index;
-    ADDRESS local;
-    ADDRESS remote;
+    address local;
+    address remote;
 
     char sni_name[128];
 
@@ -97,9 +97,9 @@ int handle_tls_handshake(TLS_SESSION *ts);
 int handle_tls_transmit(TLS_SESSION *ts);
 
 /* UTIL.C */
-void mem_range_alloc(MEM_RANGE *mr, size_t size);
-void mem_range_relloc(MEM_RANGE *mr, size_t size);
-void mem_range_free(MEM_RANGE *mr);
+void mem_range_alloc(buf_range *mr, size_t size);
+void mem_range_relloc(buf_range *mr, size_t size);
+void mem_range_free(buf_range *mr);
 
 /* CRT_POOL.C */
 int crt_pool_init(void);

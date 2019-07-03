@@ -60,7 +60,7 @@ static void dgram_timer_expire(uv_timer_t *handle);
 
 
 /* 取得NETIO底层操作接口 */
-void ssnetio_server_port(IOCTL_PORT *port) {
+void ssnetio_server_port(ioctl *port) {
     port->write_stream_out = ssnetio_write_stream_out;
     port->stream_pause = ssnetio_stream_pause;
 }
@@ -629,8 +629,8 @@ void dgram_read_done_local(
     unsigned flags) {
 
     SSNETIO_BUF *ss_buf;
-    ADDRESS srv_addr = {0};
-    ADDRESS clt_addr = {0};
+    address srv_addr = {0};
+    address clt_addr = {0};
     char key[128];
     DGRAMS *dgrams;
     uv_loop_t *loop;

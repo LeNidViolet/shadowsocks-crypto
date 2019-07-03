@@ -94,7 +94,7 @@ typedef struct {
         char slab[MAX_SS_TCP_FRAME_LEN];
     } t;
 
-    ADDRESS peer;
+    address peer;
     SSNETIO_BUF ss_buf;
 } CONN;
 
@@ -125,11 +125,11 @@ typedef struct PROXY_NODE {
 #define htonl_u(x)          ntohl_u(x)
 
 /* URIL.C */
-int sockaddr_to_str(const struct sockaddr *addr, ADDRESS *addr_s);
+int sockaddr_to_str(const struct sockaddr *addr, address *addr_s);
 void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst);
 int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
 void sockaddr_set_port(struct sockaddr *addr, unsigned short port);
-int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, ADDRESS *addr_s);
+int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, address *addr_s);
 
 enum {
     s5_invalid_length = -1,
@@ -143,7 +143,7 @@ int s5_simple_check(const char *data, size_t data_len);
  * Set data_base AND data_len, to the actual data range.
  * return 0 if success.
  */
-int s5_parse_addr(SSNETIO_BUF *buf, ADDRESS *addr);
+int s5_parse_addr(SSNETIO_BUF *buf, address *addr);
 
 /* HANDLER.C */
 void ssnetio_on_msg(int level, const char *format, ...);
@@ -151,7 +151,7 @@ void ssnetio_on_bind(const char *host, unsigned short port);
 void ssnetio_on_connection_made(PROXY_NODE *pn);
 void ssnetio_on_new_stream(CONN *conn);
 void ssnetio_on_stream_teardown(PROXY_NODE *pn);
-void ssnetio_on_new_dgram(ADDRESS *local, ADDRESS *remote, void **ctx);
+void ssnetio_on_new_dgram(address *local, address *remote, void **ctx);
 void ssnetio_on_dgram_teardown(void *ctx);
 int ssnetio_on_stream_encrypt(CONN *conn, int offset);
 int ssnetio_on_stream_decrypt(CONN *conn, int offset);
@@ -161,7 +161,7 @@ int ssnetio_on_plain_stream(CONN *conn);
 void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx);
 
 int ssnetio_write_stream_out(
-    MEM_RANGE *buf, int direct, void *stream_id,
+    buf_range *buf, int direct, void *stream_id,
     write_stream_out_callback callback, void *param);
 void ssnetio_stream_pause(void *stream_id, int direct, int pause);
 
@@ -196,16 +196,16 @@ void do_next_server(CONN *sender);
 // 向上调用至CRYPTO对用的回调中
 void sscrypto_on_msg(int level, const char *msg);
 void sscrypto_on_bind(const char *host, unsigned short port);
-void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
-void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id);
+void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx);
+void sscrypto_on_new_stream(const address *addr, void **ctx, void *stream_id);
 void sscrypto_on_stream_teardown(void *ctx);
-void sscrypto_on_new_dgram(const ADDRESS_PAIR *addr, void **ctx);
+void sscrypto_on_new_dgram(const address_pair *addr, void **ctx);
 void sscrypto_on_dgram_teardown(void *ctx);
-int sscrypto_on_plain_stream(const MEM_RANGE *buf, int direct, void *ctx);
-void sscrypto_on_plain_dgram(const MEM_RANGE *buf, int direct, void *ctx);
-int sscrypto_on_stream_encrypt(MEM_RANGE *buf, void *ctx);
-int sscrypto_on_stream_decrypt(MEM_RANGE *buf, void *ctx);
-int sscrypto_on_dgram_encrypt(MEM_RANGE *buf);
-int sscrypto_on_dgram_decrypt(MEM_RANGE *buf);
+int sscrypto_on_plain_stream(const buf_range *buf, int direct, void *ctx);
+void sscrypto_on_plain_dgram(const buf_range *buf, int direct, void *ctx);
+int sscrypto_on_stream_encrypt(buf_range *buf, void *ctx);
+int sscrypto_on_stream_decrypt(buf_range *buf, void *ctx);
+int sscrypto_on_dgram_encrypt(buf_range *buf);
+int sscrypto_on_dgram_decrypt(buf_range *buf);
 
 #endif //SHADOWSOCKS_NETIO_INTERNAL_H

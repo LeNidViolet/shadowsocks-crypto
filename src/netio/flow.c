@@ -34,7 +34,7 @@ static void loop_walk_close_done(uv_handle_t* handle);
 
 
 void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
-    ADDRESS address = {0};
+    address address = {0};
     unsigned int naddrs;
     unsigned short port;
     struct addrinfo *ai;
