@@ -180,6 +180,7 @@ int conn_cycle(const char *who, CONN *a, CONN *b);
 
 int dgram_read_local(uv_udp_t *handle);
 int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr);
+void dns_server_stop();
 
 int do_proxy_start(PROXY_NODE *pn);
 int do_proxy(CONN *sender);

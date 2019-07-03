@@ -26,7 +26,7 @@
 #include "udns/parsedns.h"
 
 
-typedef struct DNSSRV_MEM_BLOCK_{
+typedef struct {
     char buf[512];
 
     char domain[64];
@@ -44,15 +44,61 @@ typedef struct DNSSRV_MEM_BLOCK_{
     }client_addr;
 
     uv_udp_t *handle;
-} DNSSRV_MEM_BLOCK;
+} dns_block;
 
+
+static const int dns_udp_handle_max = 8;
+static int dns_udp_handle_index = 0;
+static uv_udp_t *dns_udp_handles[dns_udp_handle_max];
+
+static uv_signal_t dns_signal_handle;
+static int dns_signal_inited = 0;
+
+
+static void dnssrv_signal_cb(uv_signal_t* handle, int signum) {
+    (void)handle;
+    (void)signum;
+
+    dns_server_stop();
+}
+
+/* 注册信号 */
+static int dnssrv_signal_setup(uv_loop_t *loop) {
+    int ret = -1;
+
+    if ( dns_signal_inited ) BREAK_NOW;
+
+    ret = uv_signal_init(loop, &dns_signal_handle);
+    CHECK(0 == ret);
+
+    uv_signal_start(&dns_signal_handle, dnssrv_signal_cb, SIGINT);
+    uv_signal_start(&dns_signal_handle, dnssrv_signal_cb, SIGTERM);
+
+
+    dns_signal_inited = 1;
+BREAK_LABEL:
+
+    return ret;
+}
+
+static void dnssrv_signal_close_done(uv_handle_t* handle) {
+    (void)handle;
+}
+
+static void dnssrv_signal_close() {
+    if ( dns_signal_inited ) {
+        uv_signal_stop(&dns_signal_handle);
+        uv_close((uv_handle_t*)&dns_signal_handle, dnssrv_signal_close_done);
+        dns_signal_inited = 0;
+    }
+}
 
 
 static void dnssrv_alloc_cb(
     uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
 
     (void)handle;
-    suggested_size = sizeof(DNSSRV_MEM_BLOCK);
+    suggested_size = sizeof(dns_block);
     buf->base = malloc(suggested_size);
     buf->len = suggested_size;
     memset(buf->base, 0, suggested_size);
@@ -60,17 +106,17 @@ static void dnssrv_alloc_cb(
 
 
 void dnssrv_send_done(uv_udp_send_t *req, int status) {
-    DNSSRV_MEM_BLOCK *block;
+    dns_block *block;
 
     (void)status;
-    block = CONTAINER_OF(req, DNSSRV_MEM_BLOCK, req.send_req);
+    block = CONTAINER_OF(req, dns_block, req.send_req);
 
     free(block);
 }
 
 
 static void dnssrv_response(
-    DNSSRV_MEM_BLOCK *block,
+    dns_block *block,
     const struct sockaddr *result) {
 
     PDNS_HEADER hdr = (PDNS_HEADER)block->buf;
@@ -88,10 +134,10 @@ static void dnssrv_response(
     pos += 2;
 
     record = (PDNS_WIRE_RECORD)pos;
-    record->RecordType = ByteswapUshort(block->query_type);
+    record->RecordType  = ByteswapUshort(block->query_type);
     record->RecordClass = ByteswapUshort((unsigned short)1); // CLASS IN
-    record->TimeToLive = ByteswapUInt32((unsigned int)12);
-    record->DataLength = ByteswapUshort(block->query_type == DNS_QUERY_TYPE_IPV4 ?
+    record->TimeToLive  = ByteswapUInt32((unsigned int)12);
+    record->DataLength  = ByteswapUshort(block->query_type == DNS_QUERY_TYPE_IPV4 ?
                                         (unsigned short)4 : (unsigned short)16);
 
     pos = (char*)(record + 1);
@@ -130,9 +176,9 @@ static void dnssrv_getaddrinfo_done(
     struct addrinfo *ai;
     struct addrinfo *ai_ipv4 = NULL;
     struct addrinfo *ai_ipv6 = NULL;
-    DNSSRV_MEM_BLOCK *block = NULL;
+    dns_block *block = NULL;
 
-    block = CONTAINER_OF(req, DNSSRV_MEM_BLOCK, req);
+    block = CONTAINER_OF(req, dns_block, req);
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
@@ -172,7 +218,7 @@ static void dnssrv_read_done(
     uv_loop_t *loop;
     struct sockaddr* addr;
     int req_ipv4;
-    DNSSRV_MEM_BLOCK *block = NULL;
+    dns_block *block = NULL;
     int lookup = 1;
     struct addrinfo hints;
 
@@ -181,7 +227,7 @@ static void dnssrv_read_done(
     if ( nread <= 0 || !clientaddr )
         BREAK_NOW;
 
-    block = (DNSSRV_MEM_BLOCK *)buf->base;
+    block = (dns_block *)buf->base;
     ASSERT(nread < sizeof(block->buf) - 64);
     block->query_len = (unsigned int)nread;
 
@@ -195,7 +241,11 @@ static void dnssrv_read_done(
     if ( parse->queryClass != 1 ||
         (parse->queryType != DNS_QUERY_TYPE_IPV4 && parse->queryType != DNS_QUERY_TYPE_IPV6) ) {
 
-        ssnetio_on_msg(1, "Unknow Dns QueryClass[%d] or QueryType[%d]", parse->queryClass, parse->queryType);
+        ssnetio_on_msg(
+            1,
+            "Unknow Dns QueryClass[%d] or QueryType[%d]",
+            parse->queryClass,
+            parse->queryType);
         BREAK_NOW;
     }
 
@@ -205,6 +255,7 @@ static void dnssrv_read_done(
 
     req_ipv4 = DNS_QUERY_TYPE_IPV4 == parse->queryType ? 1 : 0;
 
+    // 首先从缓存中查找
     addr = dns_cache_find_ip(parse->queryDomain, req_ipv4);
     if ( addr ) {
         dnssrv_response(block, addr);
@@ -239,15 +290,31 @@ BREAK_LABEL:
     if ( block ) free(block);
 }
 
-int dnssrv_read_local(uv_udp_t *handle) {
+static int dnssrv_read_local(uv_udp_t *handle) {
     return uv_udp_recv_start(handle, dnssrv_alloc_cb, dnssrv_read_done);
 }
 
+static void dnssrv_handle_close_done(uv_handle_t* handle) {
+    if ( handle ) {
+        free(handle);
+    }
+}
+
+static void dnssrv_handle_close(uv_udp_t *handle) {
+    if ( handle ) {
+        uv_udp_recv_stop(handle);
+        uv_close((uv_handle_t*)handle, dnssrv_handle_close_done);
+    }
+}
+
+
 int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
-    uv_udp_t *udp_handle;
+    uv_udp_t *udp_handle = NULL;
     struct sockaddr_in ipv4_addr;
     int local_loop = 0;
-    int ret;
+    int ret = -1;
+
+    if ( dns_udp_handle_index >= dns_udp_handle_max ) BREAK_NOW;
 
     if ( !loop ) {
         loop = uv_default_loop();
@@ -269,6 +336,11 @@ int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
 
     CHECK(0 == dnssrv_read_local(udp_handle));
 
+    dns_udp_handles[dns_udp_handle_index++] = udp_handle;
+    udp_handle = NULL;
+
+    dnssrv_signal_setup(loop);
+
     if ( local_loop ) {
         ret = uv_run(loop, UV_RUN_DEFAULT);
         uv_loop_close(loop);
@@ -276,5 +348,25 @@ int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
 
 BREAK_LABEL:
 
+    if ( udp_handle ) {
+        dnssrv_handle_close(udp_handle);
+    }
+
     return ret;
+}
+
+void dns_server_stop() {
+
+    for ( int i = 0; i < dns_udp_handle_max; ++i ) {
+        if ( dns_udp_handles[i] ) {
+            dnssrv_handle_close(dns_udp_handles[i]);
+        }
+    }
+
+    memset(dns_udp_handles, 0, sizeof(dns_udp_handles));
+    dns_udp_handle_index = 0;
+
+    dnssrv_signal_close();
+
+    dns_cache_clear();
 }
