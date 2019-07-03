@@ -48,6 +48,7 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     uv_tcp_t *tcp_handle;
     uv_udp_t *udp_handle;
     SSNETIO_BUF *ss_buf;
+    const unsigned short dns_port = 53;
 
     loop = uv_req_get_data((uv_req_t *)req);
 
@@ -136,14 +137,14 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
 
 
         /* dns bind */
-        sockaddr_set_port(&s.addr, DNS_LISTEN_PORT);
+        sockaddr_set_port(&s.addr, dns_port);
         ret = dns_server_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
                 1,
                 "dns bind to %s:%d failed: %s",
                 address.host,
-                DNS_LISTEN_PORT,
+                dns_port,
                 uv_strerror(ret));
             BREAK_NOW;
         }

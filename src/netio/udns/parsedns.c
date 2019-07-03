@@ -3,7 +3,7 @@
 #include <string.h>
 #include "udns.h"
 #include "parsedns.h"
-#include "shadowsocks-crypto/comm.h"
+#include "../../comm/comm.h"
 
 unsigned int ByteswapUInt32(unsigned int i) {
 	unsigned int j;

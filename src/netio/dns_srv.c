@@ -313,6 +313,7 @@ int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     struct sockaddr_in ipv4_addr;
     int local_loop = 0;
     int ret = -1;
+    const unsigned short dns_port = 53;
 
     if ( dns_udp_handle_index >= dns_udp_handle_max ) BREAK_NOW;
 
@@ -322,7 +323,7 @@ int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     }
 
     if ( !addr ) {
-        uv_ip4_addr("0.0.0.0", DNS_LISTEN_PORT, &ipv4_addr);
+        uv_ip4_addr("0.0.0.0", dns_port, &ipv4_addr);
         addr = (const struct sockaddr*)&ipv4_addr;
     }
 

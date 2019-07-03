@@ -26,7 +26,7 @@
 
 #include <assert.h>
 #include "mbedtls/ssl.h"
-#include "shadowsocks-crypto/comm.h"
+#include "../comm/comm.h"
 
 enum {
     Tls_HandShaking,

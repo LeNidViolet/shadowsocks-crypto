@@ -25,7 +25,7 @@
 
 #include <assert.h>
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
-#include "shadowsocks-crypto/comm.h"
+#include "comm/comm.h"
 #include "mbedtls/cipher.h"
 
 typedef struct {

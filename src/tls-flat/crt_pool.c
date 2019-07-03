@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "internal.h"
-#include "shadowsocks-crypto/list.h"
+#include "../comm/list.h"
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/oid.h"
 

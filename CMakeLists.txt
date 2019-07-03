@@ -89,7 +89,8 @@ SET(SHADOWSOCKSCRYPTO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/launch.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/handler.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c
+
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/comm/list.c
 
         ${SHADOWSOCKSNETIO_SRC}
         ${TLSFLAT_SRC}

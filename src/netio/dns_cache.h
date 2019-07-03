@@ -24,7 +24,7 @@
 #define SHADOWSOCKS_NETIO_DNS_CACHE_H
 
 #include <netinet/in.h>
-#include "shadowsocks-crypto/list.h"
+#include "../comm/list.h"
 
 struct dns_cache_ip;
 typedef struct {

@@ -26,7 +26,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include "shadowsocks-crypto/comm.h"
+#include "../comm/comm.h"
 #include "uv.h"
 /* Session states. */
 enum sess_state {
