@@ -91,7 +91,7 @@ int main() {
     ctx.config.bind_port = 14450;
     ctx.config.password = "123qwe";
     ctx.config.method = "AES-256-CFB";
-    ctx.config.idel_timeout = 60;
+    ctx.config.idel_timeout = 120;
 
     ctx.callbacks.on_bind = on_bind;
     ctx.callbacks.on_msg = on_msg;
