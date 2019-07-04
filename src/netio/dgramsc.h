@@ -25,7 +25,6 @@
 
 #include "uv.h"
 #include "../comm/list.h"
-#include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
 
@@ -73,7 +72,7 @@ typedef struct {
 int dgrams_init(void);
 dgrams *dgrams_add(const char *key, uv_loop_t *loop);
 dgrams *dgrams_find_by_key(const char *key);
-void dgrams_remove(dgrams *dgramc);
+void dgrams_remove(dgrams *ds);
 void dgrams_clear(void);
 
 #endif //SHADOWSOCKS_NETIO_DGRAMSC_H

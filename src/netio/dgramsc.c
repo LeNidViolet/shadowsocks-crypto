@@ -22,36 +22,40 @@
  */
 #include "dgramsc.h"
 
-static LIST_ENTRY dgrams_list;
-static int dgrams_outstanding = 0;
+static LIST_ENTRY ds_list;
+static int ds_inited = 0;
+static int ds_outstanding = 0;
 
-static void dgrams_close(dgrams *dgrams);
-static void dgrams_free(dgrams *dgrams);
+static void dgrams_close(dgrams *ds);
+static void dgrams_free(dgrams *ds);
 static void dgrams_close_done(uv_handle_t *handle);
 
 int dgrams_init(void) {
-    InitializeListHead(&dgrams_list);
+    if ( 0 == ds_inited ) {
+        InitializeListHead(&ds_list);
+        ds_inited = 1;
+    }
 
     return 0;
 }
 
 dgrams *dgrams_add(const char *key, uv_loop_t *loop) {
-    dgrams *dgrams;
+    dgrams *ds;
 
-    ENSURE((dgrams = malloc(sizeof(*dgrams))) != NULL);
-    memset(dgrams, 0, sizeof(*dgrams));
-    CHECK(0 == uv_udp_init(loop, &dgrams->udp_out));
-    CHECK(0 == uv_timer_init(loop, &dgrams->timer));
-    uv_handle_set_data((uv_handle_t*)&dgrams->udp_out, dgrams);
-    uv_handle_set_data((uv_handle_t*)&dgrams->timer, dgrams);
+    ENSURE((ds = malloc(sizeof(*ds))) != NULL);
+    memset(ds, 0, sizeof(*ds));
+    CHECK(0 == uv_udp_init(loop, &ds->udp_out));
+    CHECK(0 == uv_timer_init(loop, &ds->timer));
+    uv_handle_set_data((uv_handle_t*)&ds->udp_out, ds);
+    uv_handle_set_data((uv_handle_t*)&ds->timer, ds);
 
-    snprintf(dgrams->key, sizeof(dgrams->key), "%s", key);
+    snprintf(ds->key, sizeof(ds->key), "%s", key);
 
-    InsertTailList(&dgrams_list, &dgrams->list);
+    InsertTailList(&ds_list, &ds->list);
 
-    dgrams->state = u_using;
-    dgrams_outstanding++;
-    return dgrams;
+    ds->state = u_using;
+    ds_outstanding++;
+    return ds;
 }
 
 dgrams *dgrams_find_by_key(const char *key) {
@@ -60,7 +64,7 @@ dgrams *dgrams_find_by_key(const char *key) {
 
     BREAK_ON_NULL(key);
 
-    for ( next = dgrams_list.Blink; next != &dgrams_list ; next = next->Blink ) {
+    for ( next = ds_list.Blink; next != &ds_list ; next = next->Blink ) {
         ds = CONTAINER_OF(next, dgrams, list);
 
         if ( 0 == strcasecmp(key, ds->key) ) {
@@ -74,10 +78,10 @@ BREAK_LABEL:
     return ret;
 }
 
-void dgrams_remove(dgrams *dgrams) {
-    if ( dgrams ) {
-        RemoveEntryList(&dgrams->list);
-        dgrams_close(dgrams);
+void dgrams_remove(dgrams *ds) {
+    if ( ds ) {
+        RemoveEntryList(&ds->list);
+        dgrams_close(ds);
     }
 }
 
@@ -85,37 +89,37 @@ void dgrams_clear(void) {
     dgrams *ds;
     LIST_ENTRY *list;
 
-    while ( !IsListEmpty(&dgrams_list) ) {
-        list = RemoveHeadList(&dgrams_list);
+    while ( !IsListEmpty(&ds_list) ) {
+        list = RemoveHeadList(&ds_list);
         ds = CONTAINER_OF(list, dgrams, list);
 
         dgrams_close(ds);
     }
 }
 
-static void dgrams_close(dgrams *dgrams) {
-    if ( dgrams->state < u_closing ) {
-        dgrams->state = u_closing;
-        uv_close((uv_handle_t *)&dgrams->udp_out, dgrams_close_done);
-        uv_close((uv_handle_t *)&dgrams->timer, dgrams_close_done);
+static void dgrams_close(dgrams *ds) {
+    if ( ds->state < u_closing ) {
+        ds->state = u_closing;
+        uv_close((uv_handle_t *)&ds->udp_out, dgrams_close_done);
+        uv_close((uv_handle_t *)&ds->timer, dgrams_close_done);
     }
 }
 
 static void dgrams_close_done(uv_handle_t *handle) {
-    dgrams *dgrams;
+    dgrams *ds;
 
-    dgrams = uv_handle_get_data(handle);
+    ds = uv_handle_get_data(handle);
 
-    dgrams->state++;
-    if ( u_dead == dgrams->state ) {
-        dgrams_free(dgrams);
+    ds->state++;
+    if ( u_dead == ds->state ) {
+        dgrams_free(ds);
     }
 }
 
-static void dgrams_free(dgrams *dgrams) {
+static void dgrams_free(dgrams *ds) {
     if ( DEBUG_CHECKS )
-        memset(dgrams, -1, sizeof(*dgrams));
-    free(dgrams);
+        memset(ds, -1, sizeof(*ds));
+    free(ds);
 
-    dgrams_outstanding--;
+    ds_outstanding--;
 }
