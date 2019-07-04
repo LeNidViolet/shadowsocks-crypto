@@ -1,0 +1,515 @@
+/**
+ *  Copyright 2018, raprepo.
+ *  Created by raprepo on 2019-07-04.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+#include "internal.h"
+#include "dns_cache.h"
+#include "dgramsc.h"
+#include "shadowsocks-crypto/shadowsocks-crypto.h"
+
+// ==========
+static const int dgram_handle_max = 8;
+static int dgram_handle_index = 0;
+static uv_udp_t *dgram_handles[dgram_handle_max];
+
+static uv_signal_t dgram_signal_handle;
+static int dgram_signal_inited = 0;
+
+extern sscrypto_ctx srv_ctx;
+
+static int dgram_read_local(uv_udp_t *handle);
+
+
+
+static void dgramsrv_signal_cb(uv_signal_t* handle, int signum) {
+    (void)handle;
+    (void)signum;
+
+    server_dgram_stop();
+}
+
+/* 注册信号 */
+static int dgramsrv_signal_setup(uv_loop_t *loop) {
+    int ret;
+
+    if ( dgram_signal_inited ) {
+        ret = 0;
+        BREAK_NOW;
+    }
+
+    ret = uv_signal_init(loop, &dgram_signal_handle);
+    CHECK(0 == ret);
+
+    uv_signal_start(&dgram_signal_handle, dgramsrv_signal_cb, SIGINT);
+    uv_signal_start(&dgram_signal_handle, dgramsrv_signal_cb, SIGTERM);
+
+    dgram_signal_inited = 1;
+BREAK_LABEL:
+
+    return ret;
+}
+
+static void dgramsrv_signal_close_done(uv_handle_t* handle) {
+    (void)handle;
+}
+
+static void dgramsrv_signal_close() {
+    if ( dgram_signal_inited ) {
+        uv_signal_stop(&dgram_signal_handle);
+        uv_close((uv_handle_t*)&dgram_signal_handle, dgramsrv_signal_close_done);
+        dgram_signal_inited = 0;
+    }
+}
+
+static void dgramsrv_handle_close_done(uv_handle_t* handle) {
+    if ( handle ) {
+        free(handle);
+    }
+}
+
+static void dgramsrv_handle_close(uv_udp_t *handle) {
+    buf_range *buf;
+
+    if ( handle ) {
+        buf = uv_handle_get_data((uv_handle_t*)handle);
+        if ( buf ) {
+            if ( buf->buf_base )
+                free(buf->buf_base);
+            free(buf);
+        }
+
+        uv_udp_recv_stop(handle);
+        uv_close((uv_handle_t*)handle, dgramsrv_handle_close_done);
+    }
+}
+
+
+/* 启动 dgram 服务 */
+int server_dgram_launch(uv_loop_t *loop, const struct sockaddr *addr) {
+    uv_udp_t *udp_handle = NULL;
+    int ret = -1;
+    buf_range *buf;
+
+    BREAK_ON_NULL(loop);
+    BREAK_ON_NULL(addr);
+
+    if ( dgram_handle_index >= dgram_handle_max ) BREAK_NOW;
+
+    ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
+    CHECK(0 == uv_udp_init(loop, udp_handle));
+
+    /* associate buf to handle */
+    ENSURE((buf = malloc(sizeof(*buf))) != NULL);
+    ENSURE((buf->buf_base = malloc(MAX_SS_UDP_FRAME_LEN)) != NULL);
+    buf->data_base   = buf->buf_base;
+    buf->buf_len     = MAX_SS_UDP_FRAME_LEN;
+    buf->data_len    = 0;
+    uv_handle_set_data((uv_handle_t*)udp_handle, buf);
+
+    ret = uv_udp_bind(udp_handle, addr, 0);
+    BREAK_ON_FAILURE(ret);
+
+    CHECK(0 == dgram_read_local(udp_handle));
+
+    dgram_handles[dgram_handle_index++] = udp_handle;
+    udp_handle = NULL;
+
+    dgramsrv_signal_setup(loop);
+
+BREAK_LABEL:
+
+    if ( udp_handle ) {
+        dgramsrv_handle_close(udp_handle);
+    }
+
+    return ret;
+}
+
+void server_dgram_stop() {
+
+    for ( int i = 0; i < dgram_handle_max; ++i ) {
+        if ( dgram_handles[i] ) {
+            dgramsrv_handle_close(dgram_handles[i]);
+        }
+    }
+
+    memset(dgram_handles, 0, sizeof(dgram_handles));
+    dgram_handle_index = 0;
+
+    dgramsrv_signal_close();
+
+    printf("dgram server exited\n");
+}
+
+
+
+
+// ==========
+static void dgram_alloc_cb_local(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
+static void dgram_read_done_local(
+    uv_udp_t *handle, ssize_t nread,
+    const uv_buf_t *buf, const struct sockaddr *addr, unsigned flags);
+static void dgram_send_remote(dgrams *ds);
+static void dgram_send_done_remote(uv_udp_send_t *req, int status);
+static void dgram_read_remote(dgrams *ds);
+static void dgram_alloc_cb_remote(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
+static void dgram_read_done_remote(
+    uv_udp_t *handle, ssize_t nread, const uv_buf_t *buf,
+    const struct sockaddr *addr, unsigned flags);
+static void dgram_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
+static void dgram_lookup(dgrams *ds);
+static void dgram_send_local(dgrams *ds, uv_buf_t *buf);
+static void dgram_send_done_local(uv_udp_send_t *req, int status);
+static void dgram_timer_reset(dgrams *dgrams);
+static void dgram_timer_expire(uv_timer_t *handle);
+
+
+
+static int dgram_read_local(uv_udp_t *handle) {
+    return uv_udp_recv_start(handle, dgram_alloc_cb_local, dgram_read_done_local);
+}
+
+static void dgram_alloc_cb_local(
+    uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+    buf_range *buf_r;
+
+    (void)suggested_size;
+
+    /* Each listening udp handle has an associated buf for recv data */
+    buf_r = uv_handle_get_data(handle);
+    buf->base = buf_r->buf_base;
+    buf->len = buf_r->buf_len;
+}
+
+static void dgram_read_done_local(
+    uv_udp_t *handle, ssize_t nread,
+    const uv_buf_t *buf,
+    const struct sockaddr *addr,
+    unsigned flags) {
+
+    buf_range *buf_r;
+    address srv_addr = {0};
+    address clt_addr = {0};
+    char key[128];
+    dgrams *ds;
+    uv_loop_t *loop;
+
+    (void)flags;
+
+    if ( nread <= 0 )
+        BREAK_NOW;
+
+    buf_r = uv_handle_get_data((uv_handle_t*)handle);
+    ASSERT(buf_r->buf_base == buf->base);
+    buf_r->data_base = buf_r->buf_base;
+    buf_r->data_len = (size_t)nread;
+
+    /* decrypt udp data */
+    if ( 0 != ssnetio_on_dgram_decrypt(buf_r, 0) ) {
+        ssnetio_on_msg(1, "Decrypt dgram packet failed");
+        BREAK_NOW;
+    }
+    BREAK_ON_NULL(buf_r->data_len);
+
+    /* obtain address info */
+    if ( 0 != s5_parse_addr(buf_r, &srv_addr) ) {
+        ssnetio_on_msg(1, "Parse dgram packet address failed");
+        BREAK_NOW;
+    }
+
+    /* Stop recv until all data sent out, or error occur */
+    CHECK(0 == uv_udp_recv_stop(handle));
+
+    CHECK(0 == sockaddr_to_str(addr, &clt_addr));
+    /* unique key */
+    snprintf(key, sizeof(key), "%s:%d-%s:%d",
+             clt_addr.host, clt_addr.port,
+             srv_addr.host, srv_addr.port);
+
+    ds = dgrams_find_by_key(key);
+    if ( ds ) {
+        /* Already in communication */
+        dgram_send_remote(ds);
+    } else {
+        /* Create new one */
+        loop = uv_handle_get_loop((uv_handle_t*)handle);
+
+        ds = dgrams_add(key, loop);
+        ds->udp_in = handle;
+        sockaddr_cpy(addr, &ds->local.addr);
+        ds->peer = srv_addr;
+        ds->ss_buf.buf_base = ds->slab;
+        ds->ss_buf.buf_len = sizeof(ds->slab);
+
+        ssnetio_on_new_dgram(&clt_addr, &srv_addr, &ds->ctx);
+
+        dgram_lookup(ds);
+    }
+
+BREAK_LABEL:
+
+    return;
+}
+
+static void dgram_lookup(dgrams *ds) {
+    uv_loop_t *loop;
+    const char* host;
+    struct addrinfo hints;
+    struct sockaddr *addr;
+
+    /* Maybe it's a ip address in string form */
+    if ( 0 == uv_ip4_addr(ds->peer.host, ds->peer.port, &ds->remote.addr4) ||
+         0 == uv_ip6_addr(ds->peer.host, ds->peer.port, &ds->remote.addr6)) {
+
+        host = dns_cache_find_host(&ds->remote.addr);
+        if ( host ) {
+            memset(ds->peer.host, 0, sizeof(ds->peer.host));
+            strcpy(ds->peer.host, host);
+        }
+
+        dgram_read_remote(ds);
+        dgram_send_remote(ds);
+    } else {
+        /* Lookup dns cache */
+        addr = dns_cache_find_ip(ds->peer.host, 1);
+        if ( !addr )
+            addr = dns_cache_find_ip(ds->peer.host, 0);
+
+        if ( addr ) {
+            sockaddr_cpy(addr, &ds->remote.addr);
+            sockaddr_set_port(&ds->remote.addr, ds->peer.port);
+
+            dgram_read_remote(ds);
+            dgram_send_remote(ds);
+        } else {
+            memset(&hints, 0, sizeof(hints));
+            hints.ai_family = AF_UNSPEC;
+            hints.ai_socktype = SOCK_STREAM;
+            hints.ai_protocol = IPPROTO_TCP;
+
+            loop = uv_handle_get_loop((uv_handle_t*)ds->udp_in);
+
+            if ( 0 != uv_getaddrinfo(loop,
+                                     &ds->req_dns,
+                                     dgram_getaddrinfo_done,
+                                     ds->peer.host,
+                                     NULL,
+                                     &hints) ) {
+                CHECK(0 == dgram_read_local(ds->udp_in));
+                dgrams_remove(ds);
+            }
+        }
+    }
+}
+
+static void dgram_getaddrinfo_done(
+    uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
+    dgrams *ds;
+    struct addrinfo *ai;
+    struct addrinfo *ai_ipv4 = NULL;
+    struct addrinfo *ai_ipv6 = NULL;
+
+    ds = CONTAINER_OF(req, dgrams, req_dns);
+
+    if ( 0 == status ) {
+        for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
+            dns_cache_add(ds->peer.host, ai->ai_addr);
+
+            if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
+                ai_ipv4 = ai;
+            }
+            if ( AF_INET6 == ai->ai_family && !ai_ipv6 ) {
+                ai_ipv6 = ai;
+            }
+        }
+
+        sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &ds->remote.addr);
+        sockaddr_set_port(&ds->remote.addr, ds->peer.port);
+
+        dgram_read_remote(ds);
+        dgram_send_remote(ds);
+    } else {
+        ssnetio_on_msg(
+            1,
+            "Dgram getaddrinfo failed: %s, domain: %s",
+            uv_strerror(status),
+            ds->peer.host);
+
+        CHECK(0 == dgram_read_local(ds->udp_in));
+        dgrams_remove(ds);
+    }
+
+    uv_freeaddrinfo(addrs);
+}
+
+static void dgram_send_remote(dgrams *ds) {
+    uv_buf_t buf;
+    buf_range *ss_buf;
+
+    ss_buf = uv_handle_get_data((uv_handle_t*)ds->udp_in);
+    buf = uv_buf_init(ss_buf->data_base, (unsigned int)ss_buf->data_len);
+
+    ssnetio_on_plain_dgram(ss_buf, STREAM_UP, ds->ctx);
+
+    if ( 0 == uv_udp_send(
+        &ds->req_c,
+        &ds->udp_out,
+        &buf,
+        1,
+        &ds->remote.addr,
+        dgram_send_done_remote) ) {
+
+        dgram_timer_reset(ds);
+    } else {
+        CHECK(0 == dgram_read_local(ds->udp_in));
+    }
+}
+
+static void dgram_send_done_remote(uv_udp_send_t *req, int status) {
+    dgrams *ds;
+
+    (void)status;
+
+    ds = CONTAINER_OF(req, dgrams, req_c);
+    CHECK(0 == dgram_read_local(ds->udp_in));
+}
+
+static void dgram_send_local(dgrams *ds, uv_buf_t *buf) {
+    if ( 0 == uv_udp_send(
+        &ds->req_s,
+        ds->udp_in,
+        buf,
+        1,
+        &ds->local.addr,
+        dgram_send_done_local) ) {
+
+        dgram_timer_reset(ds);
+    } else {
+        dgram_read_remote(ds);
+    }
+}
+
+static void dgram_send_done_local(uv_udp_send_t *req, int status) {
+    dgrams *ds;
+
+    (void)status;
+
+    ds = CONTAINER_OF(req, dgrams, req_s);
+    dgram_read_remote(ds);
+}
+
+static void dgram_read_remote(dgrams *ds) {
+    CHECK(0 == uv_udp_recv_start(
+        &ds->udp_out,
+        dgram_alloc_cb_remote,
+        dgram_read_done_remote));
+    dgram_timer_reset(ds);
+}
+
+static void dgram_alloc_cb_remote(
+    uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+    dgrams *ds;
+
+    (void)suggested_size;
+
+    ds = uv_handle_get_data(handle);
+    buf->base = ds->ss_buf.buf_base;
+    buf->len = MAX_SS_UDP_PAYLOAD_LEN;
+}
+
+static void dgram_read_done_remote(
+    uv_udp_t *handle, ssize_t nread,
+    const uv_buf_t *buf,
+    const struct sockaddr *addr,
+    unsigned flags) {
+
+    dgrams *ds;
+    buf_range *ss_buf;
+    uv_buf_t buf_s;
+    int hdr_len = 0;
+    char bs[19];
+
+    (void)flags;
+    (void)addr;
+
+    if ( nread <= 0 )
+        BREAK_NOW;
+
+    ds = CONTAINER_OF(handle, dgrams, udp_out);
+    ss_buf = &ds->ss_buf;
+    ASSERT(buf->base == ss_buf->buf_base);
+
+    ss_buf->data_base = ss_buf->buf_base;
+    ss_buf->data_len = (size_t)nread;
+
+    ssnetio_on_plain_dgram(ss_buf, STREAM_DOWN, ds->ctx);
+
+    /* pack ss hdr */
+    if ( ds->remote.addr.sa_family == AF_INET ) {
+        hdr_len = 7;
+        bs[0] = '\1';
+        memcpy(&bs[1], &ds->remote.addr4.sin_addr, 4);
+        memcpy(&bs[5], &ds->remote.addr4.sin_port, 2);
+    } else if ( ds->remote.addr.sa_family == AF_INET6 ) {
+        hdr_len = 19;
+        bs[0] = '\4';
+        memcpy(&bs[1], &ds->remote.addr6.sin6_addr, 16);
+        memcpy(&bs[17], &ds->remote.addr6.sin6_port, 2);
+    } else {
+        UNREACHABLE();
+    }
+
+    /* Insert ss head to the beginning of the buf */
+    memmove(ss_buf->buf_base + hdr_len, ss_buf->buf_base, ss_buf->data_len);
+    ss_buf->data_len += hdr_len;
+    memcpy(ss_buf->buf_base, bs, hdr_len);
+
+
+    if ( 0 != ssnetio_on_dgram_encrypt(ss_buf, 0) ) {
+        ssnetio_on_msg(1, "Encrypt dgram packet failed");
+        BREAK_NOW;
+    }
+
+    CHECK(0 == uv_udp_recv_stop(handle));
+
+    buf_s = uv_buf_init(ss_buf->data_base, (unsigned int)ss_buf->data_len);
+    dgram_send_local(ds, &buf_s);
+
+BREAK_LABEL:
+
+    return ;
+}
+
+static void dgram_timer_reset(dgrams *ds) {
+    CHECK(0 == uv_timer_start(
+        &ds->timer,
+        dgram_timer_expire,
+        srv_ctx.config.idel_timeout,
+        0));
+}
+
+static void dgram_timer_expire(uv_timer_t *handle) {
+    dgrams *ds;
+
+    ds = CONTAINER_OF(handle, dgrams, timer);
+    ssnetio_on_dgram_teardown(ds->ctx);
+    dgrams_remove(ds);
+}

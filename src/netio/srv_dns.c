@@ -47,9 +47,9 @@ typedef struct {
 } dns_block;
 
 
-static const int dns_udp_handle_max = 8;
-static int dns_udp_handle_index = 0;
-static uv_udp_t *dns_udp_handles[dns_udp_handle_max];
+static const int dns_handle_max = 8;
+static int dns_handle_index = 0;
+static uv_udp_t *dns_handles[dns_handle_max];
 
 static uv_signal_t dns_signal_handle;
 static int dns_signal_inited = 0;
@@ -59,7 +59,7 @@ static void dnssrv_signal_cb(uv_signal_t* handle, int signum) {
     (void)handle;
     (void)signum;
 
-    dns_server_stop();
+    server_dns_stop();
 }
 
 /* 注册信号 */
@@ -309,25 +309,15 @@ static void dnssrv_handle_close(uv_udp_t *handle) {
     }
 }
 
-
-int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
+/* 启动 DNS 服务 */
+int server_dns_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     uv_udp_t *udp_handle = NULL;
-    struct sockaddr_in ipv4_addr;
-    int local_loop = 0;
     int ret = -1;
-    const unsigned short dns_port = 53;
 
-    if ( dns_udp_handle_index >= dns_udp_handle_max ) BREAK_NOW;
+    BREAK_ON_NULL(loop);
+    BREAK_ON_NULL(addr);
 
-    if ( !loop ) {
-        loop = uv_default_loop();
-        local_loop = 1;
-    }
-
-    if ( !addr ) {
-        uv_ip4_addr("0.0.0.0", dns_port, &ipv4_addr);
-        addr = (const struct sockaddr*)&ipv4_addr;
-    }
+    if ( dns_handle_index >= dns_handle_max ) BREAK_NOW;
 
     ENSURE((udp_handle = malloc(sizeof(*udp_handle))) != NULL);
     CHECK(0 == uv_udp_init(loop, udp_handle));
@@ -339,15 +329,10 @@ int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr) {
 
     CHECK(0 == dnssrv_read_local(udp_handle));
 
-    dns_udp_handles[dns_udp_handle_index++] = udp_handle;
+    dns_handles[dns_handle_index++] = udp_handle;
     udp_handle = NULL;
 
     dnssrv_signal_setup(loop);
-
-    if ( local_loop ) {
-        ret = uv_run(loop, UV_RUN_DEFAULT);
-        uv_loop_close(loop);
-    }
 
 BREAK_LABEL:
 
@@ -358,16 +343,16 @@ BREAK_LABEL:
     return ret;
 }
 
-void dns_server_stop() {
+void server_dns_stop() {
 
-    for ( int i = 0; i < dns_udp_handle_max; ++i ) {
-        if ( dns_udp_handles[i] ) {
-            dnssrv_handle_close(dns_udp_handles[i]);
+    for ( int i = 0; i < dns_handle_max; ++i ) {
+        if ( dns_handles[i] ) {
+            dnssrv_handle_close(dns_handles[i]);
         }
     }
 
-    memset(dns_udp_handles, 0, sizeof(dns_udp_handles));
-    dns_udp_handle_index = 0;
+    memset(dns_handles, 0, sizeof(dns_handles));
+    dns_handle_index = 0;
 
     dnssrv_signal_close();
     dns_cache_clear();

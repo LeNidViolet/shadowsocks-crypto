@@ -41,12 +41,13 @@ ADD_DEFINITIONS(-D HAVE_CONFIG_H)
 SET(SHADOWSOCKSNETIO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/server.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/util.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/flow.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dgramsc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dns_cache.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/s5.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/handler.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/dns_srv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/srv_dns.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/srv_dgram.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/srv_tcp.c
 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/parsedns.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/dnsget.c

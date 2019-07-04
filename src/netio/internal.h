@@ -159,31 +159,24 @@ int ssnetio_write_stream_out(
     write_stream_out_callback callback, void *param);
 void ssnetio_stream_pause(void *stream_id, int direct, int pause);
 
-void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
-void on_connection(uv_stream_t *server, int status);
-void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf);
-void conn_read(connection *conn);
-void conn_read_done(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
-void conn_write(connection *conn, const void *data, unsigned int len);
-void conn_write_done(uv_write_t *req, int status);
-void conn_connect_done(uv_connect_t *req, int status);
-void conn_close(connection *conn);
-void conn_close_done(uv_handle_t *handle);
+
+
+
+
+int server_dns_launch(uv_loop_t *loop, const struct sockaddr *addr);
+void server_dns_stop();
+
+int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr);
+void server_tcp_stop();
+
+int server_dgram_launch(uv_loop_t *loop, const struct sockaddr *addr);
+void server_dgram_stop();
+
+
+
+int  do_kill(proxy_node *pn);
 void conn_timer_reset(connection *conn);
-int conn_cycle(const char *who, connection *a, connection *b);
-
-int dgram_read_local(uv_udp_t *handle);
-int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr);
-void dns_server_stop();
-
-int do_proxy_start(proxy_node *pn);
-int do_proxy(connection *sender);
-int do_kill(proxy_node *pn);
-int do_almost_dead(proxy_node *pn);
-int do_clear(proxy_node *pn);
-
-void conn_timer_expire_server(uv_timer_t *handle);
-void do_next_server(connection *sender);
+void conn_read(connection *conn);
 
 
 /* EXTERNAL FUNCTION */
