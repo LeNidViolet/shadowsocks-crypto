@@ -65,15 +65,15 @@ typedef struct {
     uv_timer_t timer;
 
     char slab[MAX_SS_UDP_FRAME_LEN]; /* for recv */
-    SSNETIO_BUF ss_buf;
+    buf_range ss_buf;
 
     void *ctx;
-} DGRAMS;
+} dgrams;
 
 int dgrams_init(void);
-DGRAMS *dgrams_add(const char *key, uv_loop_t *loop);
-DGRAMS *dgrams_find_by_key(const char *key);
-void dgrams_remove(DGRAMS *dgramc);
+dgrams *dgrams_add(const char *key, uv_loop_t *loop);
+dgrams *dgrams_find_by_key(const char *key);
+void dgrams_remove(dgrams *dgramc);
 void dgrams_clear(void);
 
 #endif //SHADOWSOCKS_NETIO_DGRAMSC_H

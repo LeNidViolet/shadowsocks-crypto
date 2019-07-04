@@ -28,45 +28,45 @@
 #include "dns_cache.h"
 #include "udns/parsedns.h"
 
-SSCRYPTO_CTX srv_ctx;
+sscrypto_ctx srv_ctx;
 
 /* 向前声明 */
-static int server_run(SSCRYPTO_CTX *ctx);
+static int server_run(sscrypto_ctx *ctx);
 static void conn_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
-static int do_handshake(PROXY_NODE *pn);
-static int do_req_lookup(PROXY_NODE *pn);
-static int do_dnsovertcp_lookup(PROXY_NODE *pn);
-static void do_dnsovertcp_packback(PROXY_NODE *pn, struct sockaddr *addr);
-static int do_req_connect(PROXY_NODE *pn);
+static int do_handshake(proxy_node *pn);
+static int do_req_lookup(proxy_node *pn);
+static int do_dnsovertcp_lookup(proxy_node *pn);
+static void do_dnsovertcp_packback(proxy_node *pn, struct sockaddr *addr);
+static int do_req_connect(proxy_node *pn);
 static void dgram_alloc_cb_local(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void dgram_read_done_local(
     uv_udp_t *handle, ssize_t nread,
     const uv_buf_t *buf, const struct sockaddr *addr, unsigned flags
 );
-static void dgram_send_remote(DGRAMS *dgrams);
+static void dgram_send_remote(dgrams *dgrams);
 static void dgram_send_done_remote(uv_udp_send_t *req, int status);
-static void dgram_read_remote(DGRAMS *dgrams);
+static void dgram_read_remote(dgrams *dgrams);
 static void dgram_alloc_cb_remote(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void dgram_read_done_remote(
     uv_udp_t *handle, ssize_t nread, const uv_buf_t *buf,
     const struct sockaddr *addr, unsigned flags
 );
 static void dgram_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
-static void dgram_lookup(DGRAMS *dgrams);
-static void dgram_send_local(DGRAMS *dgrams, uv_buf_t *buf);
+static void dgram_lookup(dgrams *dgrams);
+static void dgram_send_local(dgrams *dgrams, uv_buf_t *buf);
 static void dgram_send_done_local(uv_udp_send_t *req, int status);
-static void dgram_timer_reset(DGRAMS *dgrams);
+static void dgram_timer_reset(dgrams *dgrams);
 static void dgram_timer_expire(uv_timer_t *handle);
 
 
 /* 取得NETIO底层操作接口 */
-void ssnetio_server_port(ioctl *port) {
+void ssnetio_server_port(ioctl_port *port) {
     port->write_stream_out = ssnetio_write_stream_out;
     port->stream_pause = ssnetio_stream_pause;
 }
 
 /* LAUNCHER */
-int ssnetio_server_launch(const SSCRYPTO_CTX *ctx) {
+int ssnetio_server_launch(const sscrypto_ctx *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
@@ -104,7 +104,7 @@ void ssnetio_server_stop(void) {
     uv_async_send(&uvasync);
 }
 
-static int server_run(SSCRYPTO_CTX *ctx) {
+static int server_run(sscrypto_ctx *ctx) {
     struct addrinfo hints;
     uv_loop_t *loop;
     int ret;
@@ -141,13 +141,13 @@ BREAK_LABEL:
 
 static void conn_getaddrinfo_done(
     uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
-    CONN *incoming;
-    CONN *outgoing;
+    connection *incoming;
+    connection *outgoing;
     struct addrinfo *ai;
     struct addrinfo *ai_ipv4 = NULL;
     struct addrinfo *ai_ipv6 = NULL;
 
-    outgoing = CONTAINER_OF(req, CONN, t.addrinfo_req);
+    outgoing = CONTAINER_OF(req, connection, t.addrinfo_req);
     ASSERT(outgoing == &outgoing->pn->outgoing);
     outgoing->result = status;
 
@@ -176,11 +176,11 @@ static void conn_getaddrinfo_done(
 }
 
 void conn_timer_expire_server(uv_timer_t *handle) {
-    CONN *conn;
-    CONN *incoming;
-    CONN *outgoing;
+    connection *conn;
+    connection *incoming;
+    connection *outgoing;
 
-    conn = CONTAINER_OF(handle, CONN, timer_handle);
+    conn = CONTAINER_OF(handle, connection, timer_handle);
 
     incoming = &conn->pn->incoming;
     outgoing = &conn->pn->outgoing;
@@ -210,9 +210,9 @@ void conn_timer_expire_server(uv_timer_t *handle) {
     do_next_server(conn);
 }
 
-void do_next_server(CONN *sender) {
+void do_next_server(connection *sender) {
     int new_state = s_max;
-    PROXY_NODE *pn = sender->pn;
+    proxy_node *pn = sender->pn;
 
     ASSERT(pn->state != s_dead);
     switch (pn->state) {
@@ -253,8 +253,8 @@ void do_next_server(CONN *sender) {
         do_clear(pn);
 }
 
-static int do_dnsovertcp(PROXY_NODE *pn) {
-    CONN *incoming;
+static int do_dnsovertcp(proxy_node *pn) {
+    connection *incoming;
     int new_state;
     struct addrinfo hints;
     PDNS_PARSE parse = NULL;
@@ -327,8 +327,8 @@ BREAK_LABEL:
 }
 
 
-static int do_handshake(PROXY_NODE *pn) {
-    CONN *incoming;
+static int do_handshake(proxy_node *pn) {
+    connection *incoming;
     int ret, new_state;
     struct addrinfo hints;
     const char *host;
@@ -417,9 +417,9 @@ BREAK_LABEL:
     return new_state;
 }
 
-static int do_req_lookup(PROXY_NODE *pn) {
-    CONN *incoming;
-    CONN *outgoing;
+static int do_req_lookup(proxy_node *pn) {
+    connection *incoming;
+    connection *outgoing;
     int ret;
 
     incoming = &pn->incoming;
@@ -462,8 +462,8 @@ BREAK_LABEL:
 }
 
 
-static void do_dnsovertcp_packback(PROXY_NODE *pn, struct sockaddr *addr) {
-    CONN *incoming = &pn->incoming;
+static void do_dnsovertcp_packback(proxy_node *pn, struct sockaddr *addr) {
+    connection *incoming = &pn->incoming;
     struct sockaddr_in *addr_v4 = (struct sockaddr_in *)addr;
     unsigned short dnsPktLen;
 
@@ -501,9 +501,9 @@ static void do_dnsovertcp_packback(PROXY_NODE *pn, struct sockaddr *addr) {
         (unsigned int)incoming->ss_buf.data_len);
 }
 
-static int do_dnsovertcp_lookup(PROXY_NODE *pn) {
-    CONN *incoming;
-    CONN *outgoing;
+static int do_dnsovertcp_lookup(proxy_node *pn) {
+    connection *incoming;
+    connection *outgoing;
     int ret;
 
     incoming = &pn->incoming;
@@ -537,9 +537,9 @@ BREAK_LABEL:
 }
 
 
-static int do_req_connect(PROXY_NODE *pn) {
-    CONN *incoming;
-    CONN *outgoing;
+static int do_req_connect(proxy_node *pn) {
+    connection *incoming;
+    connection *outgoing;
     int ret, action;
 
     incoming = &pn->incoming;
@@ -612,7 +612,7 @@ int dgram_read_local(uv_udp_t *handle) {
 
 static void dgram_alloc_cb_local(
     uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
-    SSNETIO_BUF *ss_buf;
+    buf_range *ss_buf;
 
     (void)suggested_size;
 
@@ -628,11 +628,11 @@ void dgram_read_done_local(
     const struct sockaddr *addr,
     unsigned flags) {
 
-    SSNETIO_BUF *ss_buf;
+    buf_range *ss_buf;
     address srv_addr = {0};
     address clt_addr = {0};
     char key[128];
-    DGRAMS *dgrams;
+    dgrams *dgrams;
     uv_loop_t *loop;
 
     (void)flags;
@@ -692,7 +692,7 @@ BREAK_LABEL:
     return;
 }
 
-static void dgram_lookup(DGRAMS *dgrams) {
+static void dgram_lookup(dgrams *dgrams) {
     uv_loop_t *loop;
     const char* host;
     struct addrinfo hints;
@@ -745,16 +745,16 @@ static void dgram_lookup(DGRAMS *dgrams) {
 
 static void dgram_getaddrinfo_done(
     uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
-    DGRAMS *dgrams;
+    dgrams *ds;
     struct addrinfo *ai;
     struct addrinfo *ai_ipv4 = NULL;
     struct addrinfo *ai_ipv6 = NULL;
 
-    dgrams = CONTAINER_OF(req, DGRAMS, req_dns);
+    ds = CONTAINER_OF(req, dgrams, req_dns);
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
-            dns_cache_add(dgrams->peer.host, ai->ai_addr);
+            dns_cache_add(ds->peer.host, ai->ai_addr);
 
             if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
                 ai_ipv4 = ai;
@@ -764,28 +764,28 @@ static void dgram_getaddrinfo_done(
             }
         }
 
-        sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &dgrams->remote.addr);
-        sockaddr_set_port(&dgrams->remote.addr, dgrams->peer.port);
+        sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &ds->remote.addr);
+        sockaddr_set_port(&ds->remote.addr, ds->peer.port);
 
-        dgram_read_remote(dgrams);
-        dgram_send_remote(dgrams);
+        dgram_read_remote(ds);
+        dgram_send_remote(ds);
     } else {
         ssnetio_on_msg(
             1,
             "Dgram getaddrinfo failed: %s, domain: %s",
             uv_strerror(status),
-            dgrams->peer.host);
+            ds->peer.host);
 
-        CHECK(0 == dgram_read_local(dgrams->udp_in));
-        dgrams_remove(dgrams);
+        CHECK(0 == dgram_read_local(ds->udp_in));
+        dgrams_remove(ds);
     }
 
     uv_freeaddrinfo(addrs);
 }
 
-static void dgram_send_remote(DGRAMS *dgrams) {
+static void dgram_send_remote(dgrams *dgrams) {
     uv_buf_t buf;
-    SSNETIO_BUF *ss_buf;
+    buf_range *ss_buf;
 
     ss_buf = uv_handle_get_data((uv_handle_t*)dgrams->udp_in);
     buf = uv_buf_init(ss_buf->data_base, (unsigned int)ss_buf->data_len);
@@ -807,15 +807,15 @@ static void dgram_send_remote(DGRAMS *dgrams) {
 }
 
 static void dgram_send_done_remote(uv_udp_send_t *req, int status) {
-    DGRAMS *dgrams;
+    dgrams *ds;
 
     (void)status;
 
-    dgrams = CONTAINER_OF(req, DGRAMS, req_c);
-    CHECK(0 == dgram_read_local(dgrams->udp_in));
+    ds = CONTAINER_OF(req, dgrams, req_c);
+    CHECK(0 == dgram_read_local(ds->udp_in));
 }
 
-static void dgram_send_local(DGRAMS *dgrams, uv_buf_t *buf) {
+static void dgram_send_local(dgrams *dgrams, uv_buf_t *buf) {
     if ( 0 == uv_udp_send(
         &dgrams->req_s,
         dgrams->udp_in,
@@ -831,15 +831,15 @@ static void dgram_send_local(DGRAMS *dgrams, uv_buf_t *buf) {
 }
 
 static void dgram_send_done_local(uv_udp_send_t *req, int status) {
-    DGRAMS *dgrams;
+    dgrams *ds;
 
     (void)status;
 
-    dgrams = CONTAINER_OF(req, DGRAMS, req_s);
-    dgram_read_remote(dgrams);
+    ds = CONTAINER_OF(req, dgrams, req_s);
+    dgram_read_remote(ds);
 }
 
-static void dgram_read_remote(DGRAMS *dgrams) {
+static void dgram_read_remote(dgrams *dgrams) {
     CHECK(0 == uv_udp_recv_start(
         &dgrams->udp_out,
         dgram_alloc_cb_remote,
@@ -849,7 +849,7 @@ static void dgram_read_remote(DGRAMS *dgrams) {
 
 static void dgram_alloc_cb_remote(
     uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
-    DGRAMS *dgrams;
+    dgrams *dgrams;
 
     (void)suggested_size;
 
@@ -864,8 +864,8 @@ static void dgram_read_done_remote(
     const struct sockaddr *addr,
     unsigned flags) {
 
-    DGRAMS *dgrams;
-    SSNETIO_BUF *ss_buf;
+    dgrams *ds;
+    buf_range *ss_buf;
     uv_buf_t buf_s;
     int hdr_len = 0;
     char bs[19];
@@ -876,26 +876,26 @@ static void dgram_read_done_remote(
     if ( nread <= 0 )
         BREAK_NOW;
 
-    dgrams = CONTAINER_OF(handle, DGRAMS, udp_out);
-    ss_buf = &dgrams->ss_buf;
+    ds = CONTAINER_OF(handle, dgrams, udp_out);
+    ss_buf = &ds->ss_buf;
     ASSERT(buf->base == ss_buf->buf_base);
 
     ss_buf->data_base = ss_buf->buf_base;
     ss_buf->data_len = (size_t)nread;
 
-    ssnetio_on_plain_dgram(ss_buf, STREAM_DOWN, dgrams->ctx);
+    ssnetio_on_plain_dgram(ss_buf, STREAM_DOWN, ds->ctx);
 
     /* pack ss hdr */
-    if ( dgrams->remote.addr.sa_family == AF_INET ) {
+    if ( ds->remote.addr.sa_family == AF_INET ) {
         hdr_len = 7;
         bs[0] = '\1';
-        memcpy(&bs[1], &dgrams->remote.addr4.sin_addr, 4);
-        memcpy(&bs[5], &dgrams->remote.addr4.sin_port, 2);
-    } else if ( dgrams->remote.addr.sa_family == AF_INET6 ) {
+        memcpy(&bs[1], &ds->remote.addr4.sin_addr, 4);
+        memcpy(&bs[5], &ds->remote.addr4.sin_port, 2);
+    } else if ( ds->remote.addr.sa_family == AF_INET6 ) {
         hdr_len = 19;
         bs[0] = '\4';
-        memcpy(&bs[1], &dgrams->remote.addr6.sin6_addr, 16);
-        memcpy(&bs[17], &dgrams->remote.addr6.sin6_port, 2);
+        memcpy(&bs[1], &ds->remote.addr6.sin6_addr, 16);
+        memcpy(&bs[17], &ds->remote.addr6.sin6_port, 2);
     } else {
         UNREACHABLE();
     }
@@ -914,14 +914,14 @@ static void dgram_read_done_remote(
     CHECK(0 == uv_udp_recv_stop(handle));
 
     buf_s = uv_buf_init(ss_buf->data_base, (unsigned int)ss_buf->data_len);
-    dgram_send_local(dgrams, &buf_s);
+    dgram_send_local(ds, &buf_s);
 
 BREAK_LABEL:
 
     return ;
 }
 
-static void dgram_timer_reset(DGRAMS *dgrams) {
+static void dgram_timer_reset(dgrams *dgrams) {
     CHECK(0 == uv_timer_start(
         &dgrams->timer,
         dgram_timer_expire,
@@ -930,9 +930,9 @@ static void dgram_timer_reset(DGRAMS *dgrams) {
 }
 
 static void dgram_timer_expire(uv_timer_t *handle) {
-    DGRAMS *dgrams;
+    dgrams *ds;
 
-    dgrams = CONTAINER_OF(handle, DGRAMS, timer);
-    ssnetio_on_dgram_teardown(dgrams->ctx);
-    dgrams_remove(dgrams);
+    ds = CONTAINER_OF(handle, dgrams, timer);
+    ssnetio_on_dgram_teardown(ds->ctx);
+    dgrams_remove(ds);
 }

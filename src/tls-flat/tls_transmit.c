@@ -24,11 +24,11 @@
 #include "mbedtls/net.h"
 #include "internal.h"
 
-extern ioctl Ioctl;
+extern ioctl_port ioctl;
 
-int handle_tls_transmit(TLS_SESSION *ts) {
-    STREAM_SESSION *ss;
-    TLS_SESSION *ts_p;
+int handle_tls_transmit(tls_session *ts) {
+    stream_session *ss;
+    tls_session *ts_p;
     int ret, action = REJECT;
     size_t extra_len, new_len;
 
@@ -82,7 +82,7 @@ int handle_tls_transmit(TLS_SESSION *ts) {
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
 
-        Ioctl.stream_pause(ss->stream_id, ts->is_local ? STREAM_DOWN : STREAM_UP, 0);
+        ioctl.stream_pause(ss->stream_id, ts->is_local ? STREAM_DOWN : STREAM_UP, 0);
         action = NEEDMORE;
         BREAK_NOW;
     }
@@ -105,7 +105,7 @@ int handle_tls_transmit(TLS_SESSION *ts) {
     extra_len = mbedtls_ssl_get_bytes_avail(&ts->ssl);
     if( 0 != extra_len ) {
         new_len = extra_len + ret;
-        mem_range_relloc(&ts_p->buf_out, new_len);
+        buf_range_relloc(&ts_p->buf_out, new_len);
 
         ret = mbedtls_ssl_read(
             &ts->ssl,

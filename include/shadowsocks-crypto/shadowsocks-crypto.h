@@ -25,16 +25,16 @@
 
 #include <stddef.h>
 
-typedef struct SSCRYPTO_BASE_CONFIG{
+typedef struct {
     const char *bind_host;
     unsigned short bind_port;
     unsigned int idel_timeout;  /* 秒 */
 
     const char *password;
     const char *method;
-} SSCRYPTO_BASE_CONFIG;
+} sscrypto_cfg;
 
-typedef struct SSCRYPTO_CALLBACKS{
+typedef struct {
     void (*on_msg)(int level, const char *msg);
     void (*on_bind)(const char *host, unsigned short port);
     void (*on_stream_connection_made)(
@@ -59,15 +59,15 @@ typedef struct SSCRYPTO_CALLBACKS{
 
     void (*on_plain_stream)(const char *data, size_t data_len, int direct, int stream_index);
     void (*on_plain_dgram)(const char *data, size_t data_len, int direct, int dgram_index);
-} SSCRYPTO_CALLBACKS;
+} sscrypto_callback;
 
-typedef struct SSCRYPTO_CTX{
+typedef struct {
     // 基础配置
-    SSCRYPTO_BASE_CONFIG config;
+    sscrypto_cfg config;
 
     // 事件回调表
-    SSCRYPTO_CALLBACKS callbacks;
-} SSCRYPTO_CTX;
+    sscrypto_callback callbacks;
+} sscrypto_ctx;
 
 
 /**
@@ -77,7 +77,7 @@ typedef struct SSCRYPTO_CTX{
  *
  * @return                      0 on success
  */
-int sscrypto_launch(const SSCRYPTO_CTX *ctx);
+int sscrypto_launch(const sscrypto_ctx *ctx);
 void sscrypto_stop();
 
 #endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H

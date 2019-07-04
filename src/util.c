@@ -30,7 +30,7 @@
 
 /* TODO: ADD AEAD CIPHER METHODS */
 
-static const CRYPTO_INFO Methods[] = {
+static const crypto_info Methods[] = {
     {MBEDTLS_CIPHER_AES_128_CFB128, "AES-128-CFB128", "AES-128-CFB", 16, 16},
     {MBEDTLS_CIPHER_AES_192_CFB128, "AES-192-CFB128", "AES-192-CFB", 24, 16},
     {MBEDTLS_CIPHER_AES_256_CFB128, "AES-256-CFB128", "AES-256-CFB", 32, 16},
@@ -127,8 +127,8 @@ BREAK_LABEL:
     return ret;
 }
 
-const CRYPTO_INFO *get_method_by_name(const char *name) {
-    const CRYPTO_INFO *ret = NULL, *info;
+const crypto_info *get_method_by_name(const char *name) {
+    const crypto_info *ret = NULL, *info;
 
     BREAK_ON_NULL(name);
     for ( unsigned int i = 0; i < Methods_Count; ++i ) {

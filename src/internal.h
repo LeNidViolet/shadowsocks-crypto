@@ -34,18 +34,18 @@ typedef struct {
     const char *ss_name;
     const unsigned int key_len;
     const unsigned int iv_len;
-} CRYPTO_INFO;
+} crypto_info;
 
 
 #define MAX_CRYPTO_KEY_LEN          (32)
 #define MAX_CRYPTO_SALT_LEN         MAX_SS_SALT_LEN
 
 typedef struct {
-    const CRYPTO_INFO *method;
+    const crypto_info *method;
     unsigned char key[MAX_CRYPTO_KEY_LEN];
 
-    SSCRYPTO_CALLBACKS callbacks;
-} CRYPTO_ENV;
+    sscrypto_callback callbacks;
+} crypto_env;
 
 /* UTIL.C */
 /* return 0 if success */
@@ -53,7 +53,7 @@ int gen_iv(const char *seed, unsigned char *iv, size_t iv_len);
 /* return 0 if success */
 int gen_key(const char *seed, unsigned char *key, size_t key_len);
 
-const CRYPTO_INFO *get_method_by_name(const char *name);
+const crypto_info *get_method_by_name(const char *name);
 
 
 /* CALLBACK.C */
@@ -63,10 +63,10 @@ void sscrypto_on_msg(int level, const char *msg);
 
 
 /* EXTERNAL FUNCTION */
-int ssnetio_server_launch(const SSCRYPTO_CTX *ctx);
+int ssnetio_server_launch(const sscrypto_ctx *ctx);
 void ssnetio_server_stop(void);
-void ssnetio_server_port(ioctl *port);
-int tlsflat_init(const ioctl *port);
+void ssnetio_server_port(ioctl_port *port);
+int tlsflat_init(const ioctl_port *port);
 void tlsflat_clear(void);
 void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
 void tlsflat_on_stream_teardown(void *tls_ctx);

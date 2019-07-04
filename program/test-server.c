@@ -86,7 +86,7 @@ void on_plain_dgram(const char *data, size_t data_len, int direct, int dgram_ind
 
 
 int main() {
-    SSCRYPTO_CTX ctx = { 0 };
+    sscrypto_ctx ctx = { 0 };
     ctx.config.bind_host = "192.168.1.32";
     ctx.config.bind_port = 14450;
     ctx.config.password = "123qwe";

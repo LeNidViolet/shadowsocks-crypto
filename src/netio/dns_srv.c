@@ -368,6 +368,5 @@ void dns_server_stop() {
     dns_udp_handle_index = 0;
 
     dnssrv_signal_close();
-
     dns_cache_clear();
 }

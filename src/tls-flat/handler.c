@@ -43,14 +43,14 @@ BREAK_LABEL:
 }
 
 /* 解密明文向上传递 */
-void tlsflat_plain_stream(STREAM_SESSION *ss, int direct, const char *data, size_t data_len) {
+void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size_t data_len) {
     sscrypto_tls_on_plain_stream(data, data_len, direct, ss->caller_ctx);
 }
 
 /* 对外接口, 应当在TLS连接创建完毕时调用 */
 void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
     static unsigned int index = 0;
-    STREAM_SESSION *ss;
+    stream_session *ss;
     const int init_size = 1024;
 
     ss = malloc(sizeof(*ss));
@@ -66,10 +66,10 @@ void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id
     ss->local = *addr->local;
     ss->remote = *addr->remote;
 
-    mem_range_alloc(&ss->srv.buf_in, init_size);
-    mem_range_alloc(&ss->clt.buf_in, init_size);
-    mem_range_alloc(&ss->srv.buf_out, init_size);
-    mem_range_alloc(&ss->clt.buf_out, init_size);
+    buf_range_alloc(&ss->srv.buf_in, init_size);
+    buf_range_alloc(&ss->clt.buf_in, init_size);
+    buf_range_alloc(&ss->srv.buf_out, init_size);
+    buf_range_alloc(&ss->clt.buf_out, init_size);
 
     ss->srv.is_local = 1;
     ss->clt.is_local = 0;
@@ -95,18 +95,18 @@ void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id
 
 /* 对外接口, 应当在TLS连接销毁时调用 */
 void tlsflat_on_stream_teardown(void *tls_ctx) {
-    STREAM_SESSION *ss;
+    stream_session *ss;
 
     if ( tls_ctx ) {
-        ss = (STREAM_SESSION *)tls_ctx;
+        ss = (stream_session *)tls_ctx;
 
         mbedtls_ssl_free(&ss->srv.ssl);
         mbedtls_ssl_free(&ss->clt.ssl);
 
-        mem_range_free(&ss->srv.buf_in);
-        mem_range_free(&ss->clt.buf_in);
-        mem_range_free(&ss->srv.buf_out);
-        mem_range_free(&ss->clt.buf_out);
+        buf_range_free(&ss->srv.buf_in);
+        buf_range_free(&ss->clt.buf_in);
+        buf_range_free(&ss->srv.buf_out);
+        buf_range_free(&ss->clt.buf_out);
         free(ss);
     }
 }
@@ -119,13 +119,13 @@ void tlsflat_on_stream_teardown(void *tls_ctx) {
  * 一般来说每个TCP包都需要丢弃掉.
  */
 int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
-    STREAM_SESSION *ss;
-    TLS_SESSION *ts;
+    stream_session *ss;
+    tls_session *ts;
     size_t rm_len, total_len;
     buf_range *in;
     int action;
 
-    ss = (STREAM_SESSION*)ctx;
+    ss = (stream_session*)ctx;
 
     if ( ss->closing ) {
         action = TERMINATE;
@@ -160,7 +160,7 @@ int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
 
     } else {
         total_len = in->data_len + buf->data_len;
-        mem_range_relloc(in, total_len);
+        buf_range_relloc(in, total_len);
 
         memcpy(in->data_base + in->data_len, buf->data_base, buf->data_len);
         in->data_len = total_len;

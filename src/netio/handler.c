@@ -26,7 +26,7 @@
 typedef struct {
     write_stream_out_callback callback;
     void *param;
-}SND_CTX;
+} snd_ctx;
 
 static void ssnetio_write_stream_out_done(uv_write_t *req, int status);
 
@@ -45,7 +45,7 @@ void ssnetio_on_bind(const char *host, unsigned short port) {
     sscrypto_on_bind(host, port);
 }
 
-void ssnetio_on_connection_made(PROXY_NODE *pn) {
+void ssnetio_on_connection_made(proxy_node *pn) {
     address_pair pair;
 
     pair.local = &pn->incoming.peer;
@@ -54,14 +54,14 @@ void ssnetio_on_connection_made(PROXY_NODE *pn) {
     sscrypto_on_stream_connection_made(&pair, pn->ctx);
 }
 
-void ssnetio_on_new_stream(CONN *conn) {
+void ssnetio_on_new_stream(connection *conn) {
     void *ctx = NULL;
 
     sscrypto_on_new_stream(&conn->peer, &ctx, conn->pn);
     conn->pn->ctx = ctx;
 }
 
-void ssnetio_on_stream_teardown(PROXY_NODE *pn) {
+void ssnetio_on_stream_teardown(proxy_node *pn) {
     sscrypto_on_stream_teardown(pn->ctx);
 }
 
@@ -78,7 +78,7 @@ void ssnetio_on_dgram_teardown(void *ctx) {
     sscrypto_on_dgram_teardown(ctx);
 }
 
-int ssnetio_on_stream_encrypt(CONN *conn, int offset) {
+int ssnetio_on_stream_encrypt(connection *conn, int offset) {
     int ret;
     buf_range mr;
 
@@ -97,7 +97,7 @@ int ssnetio_on_stream_encrypt(CONN *conn, int offset) {
     return ret;
 }
 
-int ssnetio_on_stream_decrypt(CONN *conn, int offset) {
+int ssnetio_on_stream_decrypt(connection *conn, int offset) {
     int ret;
     buf_range mr;
 
@@ -116,7 +116,7 @@ int ssnetio_on_stream_decrypt(CONN *conn, int offset) {
     return ret;
 }
 
-int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, int offset) {
+int ssnetio_on_dgram_encrypt(buf_range *buf, int offset) {
     int ret;
     buf_range mr;
 
@@ -133,7 +133,7 @@ int ssnetio_on_dgram_encrypt(SSNETIO_BUF *buf, int offset) {
     return ret;
 }
 
-int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, int offset) {
+int ssnetio_on_dgram_decrypt(buf_range *buf, int offset) {
     int ret;
     buf_range mr;
 
@@ -150,7 +150,7 @@ int ssnetio_on_dgram_decrypt(SSNETIO_BUF *buf, int offset) {
     return ret;
 }
 
-int ssnetio_on_plain_stream(CONN *conn) {
+int ssnetio_on_plain_stream(connection *conn) {
     int action;
     int direct = conn == &conn->pn->incoming ? STREAM_UP : STREAM_DOWN;
     buf_range mr;
@@ -168,7 +168,7 @@ int ssnetio_on_plain_stream(CONN *conn) {
     return action;
 }
 
-void ssnetio_on_plain_dgram(SSNETIO_BUF *buf, int direct, void *ctx) {
+void ssnetio_on_plain_dgram(buf_range *buf, int direct, void *ctx) {
     buf_range mr;
 
     mr.buf_base = buf->buf_base;
@@ -187,16 +187,16 @@ int ssnetio_write_stream_out(
     buf_range *buf, int direct, void *stream_id,
     write_stream_out_callback callback, void *param) {
     int ret = -1;
-    PROXY_NODE *pn;
-    CONN *conn;
+    proxy_node *pn;
+    connection *conn;
     uv_buf_t buf_t;
-    SND_CTX *snd_ctx;
+    snd_ctx *snd_ctx;
 
     BREAK_ON_NULL(buf);
     BREAK_ON_FALSE(STREAM_UP == direct || STREAM_DOWN == direct);
     BREAK_ON_NULL(stream_id);
 
-    pn = (PROXY_NODE*)stream_id;
+    pn = (proxy_node*)stream_id;
     conn = STREAM_UP == direct ? &pn->outgoing : &pn->incoming;
 
     if ( STREAM_DOWN == direct ) {
@@ -234,11 +234,11 @@ BREAK_LABEL:
 }
 
 static void ssnetio_write_stream_out_done(uv_write_t *req, int status) {
-    CONN *conn;
-    SND_CTX *snd_ctx;
+    connection *conn;
+    snd_ctx *snd_ctx;
     int direct;
 
-    conn = CONTAINER_OF(req, CONN, write_req);
+    conn = CONTAINER_OF(req, connection, write_req);
     conn->pn->outstanding--;
     ASSERT(c_busy == conn->wrstate);
     conn->wrstate = c_stop;
@@ -253,13 +253,13 @@ static void ssnetio_write_stream_out_done(uv_write_t *req, int status) {
 }
 
 void ssnetio_stream_pause(void *stream_id, int direct, int pause) {
-    PROXY_NODE *pn;
-    CONN *conn;
+    proxy_node *pn;
+    connection *conn;
 
     BREAK_ON_NULL(stream_id);
     BREAK_ON_FALSE(STREAM_UP == direct || STREAM_DOWN == direct);
 
-    pn = (PROXY_NODE*)stream_id;
+    pn = (proxy_node*)stream_id;
     conn = STREAM_UP == direct ? &pn->outgoing : &pn->incoming;
     if ( pause ) {
         if ( c_busy == conn->rdstate )

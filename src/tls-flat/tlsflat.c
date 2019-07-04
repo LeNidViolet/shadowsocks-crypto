@@ -22,13 +22,13 @@
  */
 #include "internal.h"
 
-ioctl Ioctl = {0};
+ioctl_port ioctl = {0};
 
-int tlsflat_init(const ioctl *port) {
+int tlsflat_init(const ioctl_port *port) {
     int ret = -1;
 
     BREAK_ON_NULL(port);
-    Ioctl = *port;
+    ioctl = *port;
 
     ret = tls_init();
     BREAK_ON_FAILURE(ret);

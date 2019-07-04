@@ -197,7 +197,7 @@ BREAK_LABEL:
     return ret;
 }
 
-int s5_parse_addr(SSNETIO_BUF *buf, address *addr) {
+int s5_parse_addr(buf_range *buf, address *addr) {
     s5_ctx parser;
     uint8_t *p;
     size_t len;

@@ -25,8 +25,8 @@
 static LIST_ENTRY dgrams_list;
 static int dgrams_outstanding = 0;
 
-static void dgrams_close(DGRAMS *dgrams);
-static void dgrams_free(DGRAMS *dgrams);
+static void dgrams_close(dgrams *dgrams);
+static void dgrams_free(dgrams *dgrams);
 static void dgrams_close_done(uv_handle_t *handle);
 
 int dgrams_init(void) {
@@ -35,8 +35,8 @@ int dgrams_init(void) {
     return 0;
 }
 
-DGRAMS *dgrams_add(const char *key, uv_loop_t *loop) {
-    DGRAMS *dgrams;
+dgrams *dgrams_add(const char *key, uv_loop_t *loop) {
+    dgrams *dgrams;
 
     ENSURE((dgrams = malloc(sizeof(*dgrams))) != NULL);
     memset(dgrams, 0, sizeof(*dgrams));
@@ -54,17 +54,17 @@ DGRAMS *dgrams_add(const char *key, uv_loop_t *loop) {
     return dgrams;
 }
 
-DGRAMS *dgrams_find_by_key(const char *key) {
-    DGRAMS *ret = NULL, *dgrams;
+dgrams *dgrams_find_by_key(const char *key) {
+    dgrams *ret = NULL, *ds;
     LIST_ENTRY *next;
 
     BREAK_ON_NULL(key);
 
     for ( next = dgrams_list.Blink; next != &dgrams_list ; next = next->Blink ) {
-        dgrams = CONTAINER_OF(next, DGRAMS, list);
+        ds = CONTAINER_OF(next, dgrams, list);
 
-        if ( 0 == strcasecmp(key, dgrams->key) ) {
-            ret = dgrams;
+        if ( 0 == strcasecmp(key, ds->key) ) {
+            ret = ds;
             break;
         }
     }
@@ -74,7 +74,7 @@ BREAK_LABEL:
     return ret;
 }
 
-void dgrams_remove(DGRAMS *dgrams) {
+void dgrams_remove(dgrams *dgrams) {
     if ( dgrams ) {
         RemoveEntryList(&dgrams->list);
         dgrams_close(dgrams);
@@ -82,18 +82,18 @@ void dgrams_remove(DGRAMS *dgrams) {
 }
 
 void dgrams_clear(void) {
-    DGRAMS *dgrams;
+    dgrams *ds;
     LIST_ENTRY *list;
 
     while ( !IsListEmpty(&dgrams_list) ) {
         list = RemoveHeadList(&dgrams_list);
-        dgrams = CONTAINER_OF(list, DGRAMS, list);
+        ds = CONTAINER_OF(list, dgrams, list);
 
-        dgrams_close(dgrams);
+        dgrams_close(ds);
     }
 }
 
-static void dgrams_close(DGRAMS *dgrams) {
+static void dgrams_close(dgrams *dgrams) {
     if ( dgrams->state < u_closing ) {
         dgrams->state = u_closing;
         uv_close((uv_handle_t *)&dgrams->udp_out, dgrams_close_done);
@@ -102,7 +102,7 @@ static void dgrams_close(DGRAMS *dgrams) {
 }
 
 static void dgrams_close_done(uv_handle_t *handle) {
-    DGRAMS *dgrams;
+    dgrams *dgrams;
 
     dgrams = uv_handle_get_data(handle);
 
@@ -112,7 +112,7 @@ static void dgrams_close_done(uv_handle_t *handle) {
     }
 }
 
-static void dgrams_free(DGRAMS *dgrams) {
+static void dgrams_free(dgrams *dgrams) {
     if ( DEBUG_CHECKS )
         memset(dgrams, -1, sizeof(*dgrams));
     free(dgrams);

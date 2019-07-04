@@ -23,11 +23,11 @@
 #include <stdlib.h>
 #include "internal.h"
 
-extern ioctl Ioctl;
+extern ioctl_port ioctl;
 
-int handle_tls_handshake(TLS_SESSION *ts) {
+int handle_tls_handshake(tls_session *ts) {
     int ret, action;
-    STREAM_SESSION *ss;
+    stream_session *ss;
     const mbedtls_x509_crt *ws_crt;
     mbedtls_x509_crt *crt;
     mbedtls_pk_context *pk;
@@ -49,7 +49,7 @@ int handle_tls_handshake(TLS_SESSION *ts) {
 
             /* Local(server) ssl handshake done. */
             /* 检查有没有要发往webserver的数据 */
-            Ioctl.stream_pause(ss->stream_id, STREAM_UP, 0);
+            ioctl.stream_pause(ss->stream_id, STREAM_UP, 0);
             handle_tls_transmit(ts);
 
             action = REJECT;
@@ -90,7 +90,7 @@ int handle_tls_handshake(TLS_SESSION *ts) {
             action = REJECT;
         } else {
             /* Need more data. */
-            Ioctl.stream_pause(ss->stream_id, ts->is_local ? STREAM_DOWN : STREAM_UP, 0);
+            ioctl.stream_pause(ss->stream_id, ts->is_local ? STREAM_DOWN : STREAM_UP, 0);
             action = NEEDMORE;
         }
         break;

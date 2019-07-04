@@ -23,26 +23,26 @@
 #include <stdlib.h>
 #include "internal.h"
 
-CRYPTO_ENV CryptoEnv = { 0 };
+crypto_env env = { 0 };
 
-int sscrypto_launch(const SSCRYPTO_CTX *ctx) {
+int sscrypto_launch(const sscrypto_ctx *ctx) {
     int ret = -1;
-    ioctl io_port;
+    ioctl_port io_port;
 
     BREAK_ON_NULL(ctx);
     BREAK_ON_NULL(ctx->config.method);
     BREAK_ON_NULL(ctx->config.password);
 
-    CryptoEnv.method = get_method_by_name(ctx->config.method);
-    BREAK_ON_NULL(CryptoEnv.method);
+    env.method = get_method_by_name(ctx->config.method);
+    BREAK_ON_NULL(env.method);
 
 
     /* 根据设置的密码生成加密用的KEY */
-    CHECK(0 == gen_key(ctx->config.password, CryptoEnv.key, CryptoEnv.method->key_len));
+    CHECK(0 == gen_key(ctx->config.password, env.key, env.method->key_len));
 
 
     /* 保存回调 */
-    CryptoEnv.callbacks = ctx->callbacks;
+    env.callbacks = ctx->callbacks;
 
 
     /* 获取NETIO底层发送数据等接口.需要在TLSFLAT中使用 */
@@ -68,7 +68,6 @@ int sscrypto_launch(const SSCRYPTO_CTX *ctx) {
 
     /* 释放 TLS 资源 */
     tlsflat_clear();
-
 
     sscrypto_on_msg(3, "Program Exiting");
 

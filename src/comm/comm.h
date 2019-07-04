@@ -100,7 +100,7 @@ typedef struct {
         write_stream_out_callback callback, void *param);
 
     void (*stream_pause)(void *stream_id, int direct, int pause);
-} ioctl;
+} ioctl_port;
 
 enum {
     STREAM_UP,      /* local -> remote */

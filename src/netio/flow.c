@@ -24,10 +24,10 @@
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 
-extern SSCRYPTO_CTX srv_ctx;
+extern sscrypto_ctx srv_ctx;
 
 static void conn_timer_expire(uv_timer_t *handle);
-static void do_next(CONN *sender);
+static void do_next(connection *sender);
 static void loop_walk_clear(uv_loop_t *loop);
 static void loop_walk_cb(uv_handle_t* handle, void* arg);
 static void loop_walk_close_done(uv_handle_t* handle);
@@ -47,7 +47,7 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     } s;
     uv_tcp_t *tcp_handle;
     uv_udp_t *udp_handle;
-    SSNETIO_BUF *ss_buf;
+    buf_range *ss_buf;
     const unsigned short dns_port = 53;
 
     loop = uv_req_get_data((uv_req_t *)req);
@@ -164,9 +164,9 @@ BREAK_LABEL:
 void on_connection(uv_stream_t *server, int status) {
     static unsigned int index = 0;
     uv_loop_t *loop;
-    PROXY_NODE *pn;
-    CONN *incoming;
-    CONN *outgoing;
+    proxy_node *pn;
+    connection *incoming;
+    connection *outgoing;
 
     BREAK_ON_FALSE(0 == status);
 
@@ -223,7 +223,7 @@ BREAK_LABEL:
 }
 
 void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
-    CONN *conn;
+    connection *conn;
 
     (void)size;
 
@@ -238,7 +238,7 @@ void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     }
 }
 
-void conn_read(CONN *conn) {
+void conn_read(connection *conn) {
     ASSERT(conn->rdstate == c_stop);
 
     if( 0 != uv_read_start(
@@ -258,7 +258,7 @@ BREAK_LABEL:
 }
 
 void conn_read_done(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
-    CONN *conn;
+    connection *conn;
 
     conn = uv_handle_get_data((uv_handle_t*)handle);
     ASSERT(conn->ss_buf.buf_base == buf->base);
@@ -270,7 +270,7 @@ void conn_read_done(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
     do_next(conn);
 }
 
-void conn_write(CONN *conn, const void *data, unsigned int len) {
+void conn_write(connection *conn, const void *data, unsigned int len) {
     uv_buf_t buf;
 
     ASSERT(c_stop == conn->wrstate || c_done == conn->wrstate);
@@ -295,9 +295,9 @@ BREAK_LABEL:
 }
 
 void conn_write_done(uv_write_t *req, int status) {
-    CONN *conn;
+    connection *conn;
 
-    conn = CONTAINER_OF(req, CONN, write_req);
+    conn = CONTAINER_OF(req, connection, write_req);
     conn->pn->outstanding--;
     ASSERT(c_busy == conn->wrstate);
     conn->wrstate = c_done;
@@ -307,16 +307,16 @@ void conn_write_done(uv_write_t *req, int status) {
 }
 
 void conn_connect_done(uv_connect_t *req, int status) {
-    CONN *conn;
+    connection *conn;
 
-    conn = CONTAINER_OF(req, CONN, t.connect_req);
+    conn = CONTAINER_OF(req, connection, t.connect_req);
     conn->result = status;
 
     conn->pn->outstanding--;
     do_next(conn);
 }
 
-void conn_close(CONN *conn) {
+void conn_close(connection *conn) {
     ASSERT(c_dead != conn->rdstate);
     ASSERT(c_dead != conn->wrstate);
     conn->rdstate = c_dead;
@@ -328,20 +328,20 @@ void conn_close(CONN *conn) {
 }
 
 void conn_close_done(uv_handle_t *handle) {
-    CONN *conn;
+    connection *conn;
 
     conn = uv_handle_get_data(handle);
     do_next(conn);
 }
 
-void conn_timer_reset(CONN *conn) {
+void conn_timer_reset(connection *conn) {
     CHECK(0 == uv_timer_start(&conn->timer_handle,
                               conn_timer_expire,
                               conn->idle_timeout,
                               0));
 }
 
-int conn_cycle(const char *who, CONN *a, CONN *b) {
+int conn_cycle(const char *who, connection *a, connection *b) {
     if ( a->result < 0 ) {
         if ( UV_EOF != a->result ) {
             ssnetio_on_msg(
@@ -381,9 +381,9 @@ int conn_cycle(const char *who, CONN *a, CONN *b) {
     return 0;
 }
 
-int do_proxy_start(PROXY_NODE *pn) {
-    CONN *incoming;
-    CONN *outgoing;
+int do_proxy_start(proxy_node *pn) {
+    connection *incoming;
+    connection *outgoing;
     int new_state;
 
     incoming = &pn->incoming;
@@ -410,10 +410,10 @@ BREAK_LABEL:
     return new_state;
 }
 
-int do_proxy(CONN *sender) {
+int do_proxy(connection *sender) {
     int new_state = s_proxy, encrypt = 0, action;
-    CONN *incoming;
-    CONN *outgoing;
+    connection *incoming;
+    connection *outgoing;
 
     incoming = &sender->pn->incoming;
     outgoing = &sender->pn->outgoing;
@@ -482,7 +482,7 @@ BREAK_LABEL:
     return new_state;
 }
 
-int do_kill(PROXY_NODE *pn) {
+int do_kill(proxy_node *pn) {
     int new_state;
 
     if ( 0 != pn->outstanding ) {
@@ -510,12 +510,12 @@ BREAK_LABEL:
     return new_state;
 }
 
-int do_almost_dead(PROXY_NODE *pn) {
+int do_almost_dead(proxy_node *pn) {
     ASSERT(pn->state >= s_almost_dead_0);
     return pn->state + 1;  /* Another finalizer completed. */
 }
 
-int do_clear(PROXY_NODE *pn) {
+int do_clear(proxy_node *pn) {
     ssnetio_on_stream_teardown(pn);
 
     if ( DEBUG_CHECKS ) {
@@ -530,7 +530,7 @@ static void conn_timer_expire(uv_timer_t *handle) {
     conn_timer_expire_server(handle);
 }
 
-static void do_next(CONN *sender) {
+static void do_next(connection *sender) {
     do_next_server(sender);
 }
 
@@ -540,7 +540,7 @@ static void loop_walk_clear(uv_loop_t *loop) {
 
 static void loop_walk_cb(uv_handle_t* handle, void* arg) {
     uv_handle_type type;
-    SSNETIO_BUF *ss_buf;
+    buf_range *ss_buf;
 
     (void)arg;
 

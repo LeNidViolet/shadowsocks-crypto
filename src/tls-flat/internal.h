@@ -39,8 +39,8 @@ enum {
     Write_Waitack
 };
 
-typedef struct TLS_SESSION_{
-    struct STREAM_SESSION_ *ss;
+typedef struct {
+    struct stream_session_ *ss;
     mbedtls_ssl_context ssl;
     int tls_state;
 
@@ -49,9 +49,9 @@ typedef struct TLS_SESSION_{
     int is_local;
     int wrstate;
     int wait_ack_len;
-} TLS_SESSION;
+} tls_session;
 
-typedef struct STREAM_SESSION_{
+typedef struct stream_session_{
     unsigned int index;
     address local;
     address remote;
@@ -60,26 +60,26 @@ typedef struct STREAM_SESSION_{
 
     int closing;
 
-    TLS_SESSION srv;
-    TLS_SESSION clt;
+    tls_session srv;
+    tls_session clt;
 
     void *stream_id;
     void *caller_ctx;
 
     unsigned int bytes_out;
     unsigned int bytes_in;
-} STREAM_SESSION;
+} stream_session;
 
 /* HANDLER.C */
 void tlsflat_notify(int level, const char *format, ...);
-void tlsflat_plain_stream(STREAM_SESSION *ss, int direct, const char *data, size_t data_len);
+void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size_t data_len);
 
 /* TLS.C */
 int tls_init(void);
 void tls_clear(void);
 int tls_associate_context(mbedtls_ssl_context *ssl,  int as_server);
-int tls_recv_done_do_next(TLS_SESSION *ts);
-void tls_send_done_do_next(TLS_SESSION *ts);
+int tls_recv_done_do_next(tls_session *ts);
+void tls_send_done_do_next(tls_session *ts);
 int tls_resign(
     const char *sni_name,
     const mbedtls_x509_crt *ws_crt,
@@ -92,14 +92,14 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len);
 int on_tls_recv(void *ctx, unsigned char *buf, size_t len);
 
 /* TLS_HANDSHAKE.C */
-int handle_tls_handshake(TLS_SESSION *ts);
+int handle_tls_handshake(tls_session *ts);
 /* TLS_TRANSMIT.C */
-int handle_tls_transmit(TLS_SESSION *ts);
+int handle_tls_transmit(tls_session *ts);
 
 /* UTIL.C */
-void mem_range_alloc(buf_range *mr, size_t size);
-void mem_range_relloc(buf_range *mr, size_t size);
-void mem_range_free(buf_range *mr);
+void buf_range_alloc(buf_range *mr, size_t size);
+void buf_range_relloc(buf_range *mr, size_t size);
+void buf_range_free(buf_range *mr);
 
 /* CRT_POOL.C */
 int crt_pool_init(void);

@@ -25,21 +25,21 @@
 #include "internal.h"
 
 static void on_tls_send_done(void *param, int direct, int status, void *ctx);
-extern ioctl Ioctl;
+extern ioctl_port ioctl;
 
 typedef struct {
     buf_range mr;
     size_t snd_len;
-    TLS_SESSION *ts;
+    tls_session *ts;
 } TLS_SND_CTX;
 
 int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
-    TLS_SESSION *ts;
-    STREAM_SESSION *ss;
+    tls_session *ts;
+    stream_session *ss;
     int direct, ret;
     TLS_SND_CTX *tls_snd_ctx = NULL;
 
-    ts = (TLS_SESSION *)ctx;
+    ts = (tls_session *)ctx;
     ss = ts->ss;
     direct = ts->is_local ? STREAM_DOWN : STREAM_UP;
 
@@ -72,13 +72,13 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
     tls_snd_ctx = malloc(sizeof(*tls_snd_ctx));
     CHECK(tls_snd_ctx);
     memset(tls_snd_ctx, 0, sizeof(*tls_snd_ctx));
-    mem_range_alloc(&tls_snd_ctx->mr, len + 64);
+    buf_range_alloc(&tls_snd_ctx->mr, len + 64);
     memcpy(tls_snd_ctx->mr.buf_base, buf, len);
     tls_snd_ctx->mr.data_len = len;
     tls_snd_ctx->snd_len = len;
     tls_snd_ctx->ts = ts;
 
-    ret = Ioctl.write_stream_out(
+    ret = ioctl.write_stream_out(
         &tls_snd_ctx->mr,
         direct,
         ts->ss->stream_id,
@@ -97,8 +97,8 @@ BREAK_LABEL:
 }
 
 static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
-    STREAM_SESSION *ss;
-    TLS_SESSION *ts;
+    stream_session *ss;
+    tls_session *ts;
     TLS_SND_CTX *tls_snd_ctx = NULL;
 
     (void)direct;
@@ -126,6 +126,6 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
         ss->closing = 1;
     }
 
-    mem_range_free(&tls_snd_ctx->mr);
+    buf_range_free(&tls_snd_ctx->mr);
     free(tls_snd_ctx);
 }

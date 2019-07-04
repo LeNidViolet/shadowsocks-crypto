@@ -24,14 +24,14 @@
 #include <string.h>
 #include "internal.h"
 
-void mem_range_alloc(buf_range *mr, size_t size) {
+void buf_range_alloc(buf_range *mr, size_t size) {
     mr->buf_base = mr->data_base = malloc(size);
     ASSERT(mr->buf_base);
     mr->buf_len = size;
     mr->data_len = 0;
 }
 
-void mem_range_free(buf_range *mr) {
+void buf_range_free(buf_range *mr) {
     if ( mr->buf_base ) {
         free(mr->buf_base);
     }
@@ -39,11 +39,11 @@ void mem_range_free(buf_range *mr) {
     mr->buf_len = mr->data_len = 0;
 }
 
-void mem_range_relloc(buf_range *mr, size_t size) {
+void buf_range_relloc(buf_range *mr, size_t size) {
     char *tmp;
 
     if ( !mr->buf_base ) {
-        mem_range_alloc(mr, size);
+        buf_range_alloc(mr, size);
     } else if ( mr->buf_len < size ) {
         tmp = malloc(size);
         ASSERT(tmp);

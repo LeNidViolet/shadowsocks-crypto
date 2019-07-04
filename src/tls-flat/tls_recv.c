@@ -25,11 +25,11 @@
 #include "internal.h"
 
 int on_tls_recv(void *ctx, unsigned char *buf, size_t len) {
-    TLS_SESSION *ts;
-    STREAM_SESSION *ss;
+    tls_session *ts;
+    stream_session *ss;
     size_t wants = len, eaten = 0;
 
-    ts = (TLS_SESSION *)ctx;
+    ts = (tls_session *)ctx;
 
     if ( ts->buf_in.data_len ) {
         eaten = wants > ts->buf_in.data_len ? ts->buf_in.data_len : wants;

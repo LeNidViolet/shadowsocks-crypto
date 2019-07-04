@@ -40,7 +40,7 @@ extern const size_t root_key_len;
 /*
  * 供 SERVER 端使用的 TLS 环境
  */
-typedef struct _TLS_SRV{
+typedef struct {
     mbedtls_x509_crt root_crt;                      // 创建签名用的根证书
     mbedtls_pk_context root_key;                    // 创建签名用的根证书私钥
 
@@ -51,23 +51,23 @@ typedef struct _TLS_SRV{
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ssl_cache_context cache;
     mbedtls_ssl_ticket_context ticket_ctx;
-} TLS_SRV;
+} tls_srv;
 
 /*
  * 供 CLIENT 端使用的 TLS 环境
  */
-typedef struct _TLS_CLT{
+typedef struct {
     mbedtls_ssl_config conf;                        // SSL设置
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
-} TLS_CLT;
+} tls_clt;
 
 /*
  * MBEDTLS 环境
  */
-typedef struct _TLS{
-    TLS_SRV srv;
-    TLS_CLT clt;
+typedef struct {
+    tls_srv srv;
+    tls_clt clt;
 } TLS;
 
 
@@ -82,20 +82,20 @@ static int tls_handshake_sni_cb(
     const unsigned char *name,
     size_t name_len);
 
-static int tls_clt_init(TLS_CLT *clt);
-static int tls_srv_init(TLS_SRV *srv);
-static void do_handshake(TLS_SESSION *ts);
-static void do_transmit(TLS_SESSION *ts);
+static int tls_clt_init(tls_clt *clt);
+static int tls_srv_init(tls_srv *srv);
+static void do_handshake(tls_session *ts);
+static void do_transmit(tls_session *ts);
 
-static TLS Tls;
+static TLS tls;
 
 int tls_init(void) {
     int ret;
 
-    memset(&Tls, 0, sizeof(Tls));
-    ret = tls_srv_init(&Tls.srv);
+    memset(&tls, 0, sizeof(tls));
+    ret = tls_srv_init(&tls.srv);
     if ( 0 == ret )
-        ret = tls_clt_init(&Tls.clt);
+        ret = tls_clt_init(&tls.clt);
 
     return ret;
 }
@@ -104,7 +104,7 @@ int tls_init(void) {
 /*
  * 初始化 tls server 端
  */
-static int tls_srv_init(TLS_SRV *srv) {
+static int tls_srv_init(tls_srv *srv) {
     int ret;
 
     mbedtls_x509_crt_init(&srv->root_crt);
@@ -211,7 +211,7 @@ BREAK_LABEL:
 /*
  * 初始化 tls client 端
  */
-static int tls_clt_init(TLS_CLT *clt) {
+static int tls_clt_init(tls_clt *clt) {
     int ret;
 
     mbedtls_ssl_config_init(&clt->conf);
@@ -264,19 +264,19 @@ BREAK_LABEL:
 
 void tls_clear(void) {
     /* srv */
-    mbedtls_x509_crt_free(&Tls.srv.root_crt);
-    mbedtls_pk_free(&Tls.srv.root_key);
-    mbedtls_ssl_config_free(&Tls.srv.conf);
-    mbedtls_entropy_free(&Tls.srv.entropy);
-    mbedtls_ctr_drbg_free(&Tls.srv.ctr_drbg);
-    mbedtls_ssl_cache_free(&Tls.srv.cache);
-    mbedtls_ssl_ticket_free(&Tls.srv.ticket_ctx);
-    mbedtls_pk_free(&Tls.srv.mykey);
+    mbedtls_x509_crt_free(&tls.srv.root_crt);
+    mbedtls_pk_free(&tls.srv.root_key);
+    mbedtls_ssl_config_free(&tls.srv.conf);
+    mbedtls_entropy_free(&tls.srv.entropy);
+    mbedtls_ctr_drbg_free(&tls.srv.ctr_drbg);
+    mbedtls_ssl_cache_free(&tls.srv.cache);
+    mbedtls_ssl_ticket_free(&tls.srv.ticket_ctx);
+    mbedtls_pk_free(&tls.srv.mykey);
 
     /* clt */
-    mbedtls_ssl_config_free(&Tls.clt.conf);
-    mbedtls_entropy_free(&Tls.clt.entropy);
-    mbedtls_ctr_drbg_free(&Tls.clt.ctr_drbg);
+    mbedtls_ssl_config_free(&tls.clt.conf);
+    mbedtls_entropy_free(&tls.clt.entropy);
+    mbedtls_ctr_drbg_free(&tls.clt.ctr_drbg);
 }
 
 static void tls_debug_out(
@@ -305,13 +305,13 @@ static int tls_handshake_sni_cb(
     mbedtls_ssl_context *ssl,
     const unsigned char *name,
     size_t name_len) {
-    TLS_SESSION *ts;
-    STREAM_SESSION *ss;
+    tls_session *ts;
+    stream_session *ss;
     int result = -1;
 
     (void)p_info;
 
-    ts = CONTAINER_OF(ssl, TLS_SESSION, ssl);
+    ts = CONTAINER_OF(ssl, tls_session, ssl);
     ss = ts->ss;
 
     BREAK_ON_FALSE(name_len < sizeof(ss->sni_name));
@@ -328,18 +328,15 @@ BREAK_LABEL:
 
 int tls_associate_context(mbedtls_ssl_context *ssl,  int as_server) {
     int result;
-    TLS *tls;
 
-    tls = &Tls;
-
-    mbedtls_ssl_config *conf = as_server ? &tls->srv.conf : &tls->clt.conf;
+    mbedtls_ssl_config *conf = as_server ? &tls.srv.conf : &tls.clt.conf;
 
     result = mbedtls_ssl_setup(ssl, conf);
 
     return result;
 }
 
-int tls_recv_done_do_next(TLS_SESSION *ts) {
+int tls_recv_done_do_next(tls_session *ts) {
     int ret = PASS;
 
     switch ( ts->tls_state ) {
@@ -357,7 +354,7 @@ int tls_recv_done_do_next(TLS_SESSION *ts) {
     return ret;
 }
 
-void tls_send_done_do_next(TLS_SESSION *ts) {
+void tls_send_done_do_next(tls_session *ts) {
     switch ( ts->tls_state ) {
     case Tls_HandShaking:
         do_handshake(ts);
@@ -371,12 +368,12 @@ void tls_send_done_do_next(TLS_SESSION *ts) {
     }
 }
 
-static void do_handshake(TLS_SESSION *ts) {
+static void do_handshake(tls_session *ts) {
     handle_tls_handshake(ts);
 }
 
-static void do_transmit(TLS_SESSION *ts) {
-    TLS_SESSION *ts_p;
+static void do_transmit(tls_session *ts) {
+    tls_session *ts_p;
     int ret;
 
     ts_p = ts->is_local ? &ts->ss->clt : &ts->ss->srv;
@@ -416,16 +413,16 @@ int tls_resign(
     ret = mbedtls_x509_crt_resign(
         crt,
         ws_crt,
-        &Tls.srv.mykey,
-        &Tls.srv.root_crt,
-        &Tls.srv.root_key,
+        &tls.srv.mykey,
+        &tls.srv.root_crt,
+        &tls.srv.root_key,
         NULL);
     BREAK_ON_FAILURE(ret);
 
-    ret = crt_pool_add(sni_name, crt, &Tls.srv.mykey);
+    ret = crt_pool_add(sni_name, crt, &tls.srv.mykey);
     if ( 0 == ret ) {
         *ret_crt = crt;
-        *ret_pk = &Tls.srv.mykey;
+        *ret_pk = &tls.srv.mykey;
     }
 
 BREAK_LABEL:
