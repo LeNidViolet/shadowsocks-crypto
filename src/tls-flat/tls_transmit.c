@@ -24,7 +24,7 @@
 #include "mbedtls/net.h"
 #include "internal.h"
 
-extern ioctl_port ioctl;
+extern ioctl_port ioctlp;
 
 int handle_tls_transmit(tls_session *ts) {
     stream_session *ss;
@@ -82,7 +82,7 @@ int handle_tls_transmit(tls_session *ts) {
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
 
-        ioctl.stream_pause(ss->stream_id, ts->is_local ? STREAM_DOWN : STREAM_UP, 0);
+        ioctlp.stream_pause(ss->stream_id, ts->is_local ? STREAM_DOWN : STREAM_UP, 0);
         action = NEEDMORE;
         BREAK_NOW;
     }

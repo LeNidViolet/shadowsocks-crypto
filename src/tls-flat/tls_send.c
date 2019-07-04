@@ -25,7 +25,7 @@
 #include "internal.h"
 
 static void on_tls_send_done(void *param, int direct, int status, void *ctx);
-extern ioctl_port ioctl;
+extern ioctl_port ioctlp;
 
 typedef struct {
     buf_range mr;
@@ -78,7 +78,7 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
     tls_snd_ctx->snd_len = len;
     tls_snd_ctx->ts = ts;
 
-    ret = ioctl.write_stream_out(
+    ret = ioctlp.write_stream_out(
         &tls_snd_ctx->mr,
         direct,
         ts->ss->stream_id,

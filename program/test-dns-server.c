@@ -24,9 +24,24 @@
 #include <string.h>
 #include "uv.h"
 
-int dns_server_launch(uv_loop_t *loop, const struct sockaddr *addr);
+int server_dns_launch(uv_loop_t *loop, const struct sockaddr *addr);
+
 
 int main() {
+    uv_loop_t *loop;
+    union {
+        struct sockaddr_in6 addr6;
+        struct sockaddr_in addr4;
+        struct sockaddr addr;
+    } addr;
 
-    dns_server_launch(NULL, NULL);
+    loop = uv_default_loop();
+    uv_ip4_addr("0.0.0.0", 53, &addr.addr4);
+
+    server_dns_launch(loop, &addr.addr);
+
+    uv_run(loop, UV_RUN_DEFAULT);
+    uv_loop_close(loop);
 }
+
+
