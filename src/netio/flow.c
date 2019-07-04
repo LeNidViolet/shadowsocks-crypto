@@ -36,7 +36,6 @@ static void loop_walk_close_done(uv_handle_t* handle);
 void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     address address = {0};
     unsigned int naddrs;
-    unsigned short port;
     struct addrinfo *ai;
     uv_loop_t *loop;
     int ret = -1;
@@ -66,23 +65,14 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     }
     BREAK_ON_NULL(naddrs);
 
-    port = srv_ctx.config.bind_port;
     for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
         if ( AF_INET != ai->ai_family && AF_INET6 != ai->ai_family ) {
             continue;
         }
 
-        if ( AF_INET == ai->ai_family ) {
-            s.addr4 = *(const struct sockaddr_in *)ai->ai_addr;
-            s.addr4.sin_port = htons_u(port);
-        }
-        else if ( AF_INET6 == ai->ai_family ) {
-            s.addr6 = *(const struct sockaddr_in6 *)ai->ai_addr;
-            s.addr6.sin6_port = htons_u(port);
-        }
-        else {
-            UNREACHABLE();
-        }
+        // 组合地址
+        sockaddr_cpy(ai->ai_addr, &s.addr);
+        sockaddr_set_port(&s.addr, srv_ctx.config.bind_port);
 
         CHECK(0 == sockaddr_to_str(&s.addr, &address));
 
@@ -119,8 +109,9 @@ void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         /* associate buf to handle */
         ENSURE((ss_buf = malloc(sizeof(*ss_buf))) != NULL);
         ENSURE((ss_buf->buf_base = malloc(MAX_SS_UDP_FRAME_LEN)) != NULL);
-        ss_buf->data_base = ss_buf->buf_base;
-        ss_buf->buf_len = MAX_SS_UDP_FRAME_LEN;
+        ss_buf->data_base   = ss_buf->buf_base;
+        ss_buf->buf_len     = MAX_SS_UDP_FRAME_LEN;
+        ss_buf->data_len    = 0;
         uv_handle_set_data((uv_handle_t*)udp_handle, ss_buf);
 
         ret = uv_udp_bind(udp_handle, &s.addr, 0);

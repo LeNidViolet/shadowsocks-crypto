@@ -64,16 +64,18 @@ static void dnssrv_signal_cb(uv_signal_t* handle, int signum) {
 
 /* 注册信号 */
 static int dnssrv_signal_setup(uv_loop_t *loop) {
-    int ret = -1;
+    int ret;
 
-    if ( dns_signal_inited ) BREAK_NOW;
+    if ( dns_signal_inited ) {
+        ret = 0;
+        BREAK_NOW;
+    }
 
     ret = uv_signal_init(loop, &dns_signal_handle);
     CHECK(0 == ret);
 
     uv_signal_start(&dns_signal_handle, dnssrv_signal_cb, SIGINT);
     uv_signal_start(&dns_signal_handle, dnssrv_signal_cb, SIGTERM);
-
 
     dns_signal_inited = 1;
 BREAK_LABEL:
@@ -233,7 +235,7 @@ static void dnssrv_read_done(
 
     parse = ParseDnsRecord(buf->base, block->query_len);
     if ( !parse ) {
-        ssnetio_on_msg(1, "Dns Record Parse Failed Length[%d]", block->query_len);
+        ssnetio_on_msg(1, "dns record parse failed length[%d]", block->query_len);
         BREAK_NOW;
     }
 
@@ -243,7 +245,7 @@ static void dnssrv_read_done(
 
         ssnetio_on_msg(
             1,
-            "Unknow Dns QueryClass[%d] or QueryType[%d]",
+            "unknow dns queryclass[%d] or querytype[%d]",
             parse->queryClass,
             parse->queryType);
         BREAK_NOW;
@@ -278,7 +280,7 @@ static void dnssrv_read_done(
                                  parse->queryDomain,
                                  NULL,
                                  &hints) ) {
-            ssnetio_on_msg(1, "Dns uv_getaddrinfo Failed [%s]", block->domain);
+            ssnetio_on_msg(1, "dns uv_getaddrinfo failed [%s]", block->domain);
             BREAK_NOW;
         }
     }
@@ -369,4 +371,6 @@ void dns_server_stop() {
 
     dnssrv_signal_close();
     dns_cache_clear();
+
+    printf("dns server exited\n");
 }
