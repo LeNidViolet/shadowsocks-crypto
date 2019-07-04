@@ -20,8 +20,25 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-
 #include "internal.h"
+
+// ==========
+void sscrypto_on_msg(int level, const char *format, ...);
+void sscrypto_on_bind(const char *host, unsigned short port);
+void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx);
+void sscrypto_on_new_stream(const address *addr, void **ctx, void *stream_id);
+void sscrypto_on_stream_teardown(void *ctx);
+void sscrypto_on_new_dgram(const address_pair *addr, void **ctx);
+void sscrypto_on_dgram_teardown(void *ctx);
+int  sscrypto_on_plain_stream(const buf_range *buf, int direct, void *ctx);
+void sscrypto_on_plain_dgram(const buf_range *buf, int direct, void *ctx);
+int  sscrypto_on_stream_encrypt(buf_range *buf, void *ctx);
+int  sscrypto_on_stream_decrypt(buf_range *buf, void *ctx);
+int  sscrypto_on_dgram_encrypt(buf_range *buf);
+int  sscrypto_on_dgram_decrypt(buf_range *buf);
+
+
+// ==========
 
 typedef struct {
     write_stream_out_callback callback;

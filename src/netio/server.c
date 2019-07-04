@@ -34,13 +34,6 @@ sscrypto_ctx srv_ctx;
 static int server_run(sscrypto_ctx *ctx);
 static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 
-
-/* 取得NETIO底层操作接口 */
-void ssnetio_server_port(ioctl_port *port) {
-    port->write_stream_out = ssnetio_write_stream_out;
-    port->stream_pause = ssnetio_stream_pause;
-}
-
 /* LAUNCHER */
 int ssnetio_server_launch(const sscrypto_ctx *ctx) {
     int ret = -1;
@@ -64,6 +57,12 @@ int ssnetio_server_launch(const sscrypto_ctx *ctx) {
 BREAK_LABEL:
 
     return ret;
+}
+
+/* 取得NETIO底层操作接口 */
+void ssnetio_server_port(ioctl_port *port) {
+    port->write_stream_out = ssnetio_write_stream_out;
+    port->stream_pause = ssnetio_stream_pause;
 }
 
 

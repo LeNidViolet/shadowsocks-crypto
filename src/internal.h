@@ -59,7 +59,7 @@ const crypto_info *get_method_by_name(const char *name);
 /* CALLBACK.C */
 int init_crypt_unit(void);
 void free_crypt_unit(void);
-void sscrypto_on_msg(int level, const char *msg);
+void sscrypto_on_msg(int level, const char *format, ...);
 
 
 /* EXTERNAL FUNCTION */

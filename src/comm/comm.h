@@ -24,6 +24,8 @@
 #define SHADOWSOCKS_CRYPTO_COMM_H
 
 #include <stddef.h>
+#include <assert.h>
+#include <stdlib.h>
 
 #define BREAK_LABEL                                     \
     cleanup
@@ -73,6 +75,16 @@ if ( !(value) )                                         \
 
 #define MAX_SS_TCP_FRAME_LEN       (MAX_SS_TCP_PAYLOAD_LEN + MAX_S5_HDR_LEN + MAX_SS_TCP_WRAPPER_LEN)
 #define MAX_SS_UDP_FRAME_LEN       (MAX_SS_UDP_PAYLOAD_LEN + MAX_S5_HDR_LEN + MAX_SS_UDP_WRAPPER_LEN)
+
+
+#define htons_u(x)          (unsigned short)( (((x) & 0xffu) << 8u) | (((x) & 0xff00u) >> 8u) )
+#define ntohs_u(x)          htons_u(x)
+
+#define ntohl_u(x)        ( (((x) & 0xffu) << 24u) | \
+                            (((x) & 0xff00u) << 8u) | \
+                            (((x) & 0xff0000u) >> 8u) | \
+                            (((x) & 0xff000000) >> 24u) )
+#define htonl_u(x)          ntohl_u(x)
 
 
 typedef struct {

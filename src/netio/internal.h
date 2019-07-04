@@ -24,10 +24,9 @@
 #ifndef SHADOWSOCKS_NETIO_INTERNAL_H
 #define SHADOWSOCKS_NETIO_INTERNAL_H
 
-#include <assert.h>
-#include <stdlib.h>
 #include "../comm/comm.h"
 #include "uv.h"
+
 /* Session states. */
 enum sess_state {
     s_handshake,        /* Wait for client handshake. */
@@ -107,23 +106,12 @@ typedef struct proxy_node_{
 } proxy_node;
 
 
-
-
-#define htons_u(x)          (unsigned short)( (((x) & 0xffu) << 8u) | (((x) & 0xff00u) >> 8u) )
-#define ntohs_u(x)          htons_u(x)
-
-#define ntohl_u(x)        ( (((x) & 0xffu) << 24u) | \
-                            (((x) & 0xff00u) << 8u) | \
-                            (((x) & 0xff0000u) >> 8u) | \
-                            (((x) & 0xff000000) >> 24u) )
-#define htonl_u(x)          ntohl_u(x)
-
 /* URIL.C */
-int sockaddr_to_str(const struct sockaddr *addr, address *addr_s);
+int  sockaddr_to_str(const struct sockaddr *addr, address *addr_s);
 void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst);
-int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
+int  sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
 void sockaddr_set_port(struct sockaddr *addr, unsigned short port);
-int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, address *addr_s);
+int  str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, address *addr_s);
 
 enum {
     s5_invalid_length = -1,
@@ -147,14 +135,14 @@ void ssnetio_on_new_stream(connection *conn);
 void ssnetio_on_stream_teardown(proxy_node *pn);
 void ssnetio_on_new_dgram(address *local, address *remote, void **ctx);
 void ssnetio_on_dgram_teardown(void *ctx);
-int ssnetio_on_stream_encrypt(connection *conn, int offset);
-int ssnetio_on_stream_decrypt(connection *conn, int offset);
-int ssnetio_on_dgram_encrypt(buf_range *buf, int offset);
-int ssnetio_on_dgram_decrypt(buf_range *buf, int offset);
-int ssnetio_on_plain_stream(connection *conn);
+int  ssnetio_on_stream_encrypt(connection *conn, int offset);
+int  ssnetio_on_stream_decrypt(connection *conn, int offset);
+int  ssnetio_on_dgram_encrypt(buf_range *buf, int offset);
+int  ssnetio_on_dgram_decrypt(buf_range *buf, int offset);
+int  ssnetio_on_plain_stream(connection *conn);
 void ssnetio_on_plain_dgram(buf_range *buf, int direct, void *ctx);
 
-int ssnetio_write_stream_out(
+int  ssnetio_write_stream_out(
     buf_range *buf, int direct, void *stream_id,
     write_stream_out_callback callback, void *param);
 void ssnetio_stream_pause(void *stream_id, int direct, int pause);
@@ -163,13 +151,13 @@ void ssnetio_stream_pause(void *stream_id, int direct, int pause);
 
 
 
-int server_dns_launch(uv_loop_t *loop, const struct sockaddr *addr);
+int  server_dns_launch(uv_loop_t *loop, const struct sockaddr *addr);
 void server_dns_stop();
 
-int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr);
+int  server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr);
 void server_tcp_stop();
 
-int server_dgram_launch(uv_loop_t *loop, const struct sockaddr *addr);
+int  server_dgram_launch(uv_loop_t *loop, const struct sockaddr *addr);
 void server_dgram_stop();
 
 
@@ -177,22 +165,5 @@ void server_dgram_stop();
 int  do_kill(proxy_node *pn);
 void conn_timer_reset(connection *conn);
 void conn_read(connection *conn);
-
-
-/* EXTERNAL FUNCTION */
-// 向上调用至CRYPTO对用的回调中
-void sscrypto_on_msg(int level, const char *msg);
-void sscrypto_on_bind(const char *host, unsigned short port);
-void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx);
-void sscrypto_on_new_stream(const address *addr, void **ctx, void *stream_id);
-void sscrypto_on_stream_teardown(void *ctx);
-void sscrypto_on_new_dgram(const address_pair *addr, void **ctx);
-void sscrypto_on_dgram_teardown(void *ctx);
-int sscrypto_on_plain_stream(const buf_range *buf, int direct, void *ctx);
-void sscrypto_on_plain_dgram(const buf_range *buf, int direct, void *ctx);
-int sscrypto_on_stream_encrypt(buf_range *buf, void *ctx);
-int sscrypto_on_stream_decrypt(buf_range *buf, void *ctx);
-int sscrypto_on_dgram_encrypt(buf_range *buf);
-int sscrypto_on_dgram_decrypt(buf_range *buf);
 
 #endif //SHADOWSOCKS_NETIO_INTERNAL_H

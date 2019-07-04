@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 #include <stdlib.h>
+#include <stdarg.h>
 #include <memory.h>
 #include "mbedtls/platform.h"
 #include "mbedtls/cipher.h"
@@ -89,7 +90,14 @@ void free_crypt_unit(void) {
 }
 
 
-void sscrypto_on_msg(int level, const char *msg) {
+void sscrypto_on_msg(int level, const char *format, ...) {
+    va_list ap;
+    char msg[1024];
+
+    va_start(ap, format);
+    vsnprintf(msg, sizeof(msg), format, ap);
+    va_end(ap);
+
     if ( env.callbacks.on_msg ) {
         env.callbacks.on_msg(level, msg);
     }
