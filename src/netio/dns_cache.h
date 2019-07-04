@@ -45,7 +45,7 @@ typedef struct {
 } dns_cache_entry;
 
 
-int     dns_cache_init(void);
+void    dns_cache_init(void);
 void    dns_cache_clear(void);
 
 /* 根据域名查询缓存IP */

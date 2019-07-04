@@ -34,13 +34,11 @@ static void dns_cache_free(dns_cache_entry *dnsc);
 /* TODO: ADD DNS TIMEOUT */
 // 非线程安全 未加锁
 
-int dns_cache_init(void) {
+void dns_cache_init(void) {
     if ( 0 == cache_inited ) {
         InitializeListHead(&cache_list);
         cache_inited = 1;
     }
-
-    return 0;
 }
 
 struct sockaddr* dns_cache_find_ip(const char *host, int req_ipv4) {

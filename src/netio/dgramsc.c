@@ -30,13 +30,11 @@ static void dgrams_close(dgrams *ds);
 static void dgrams_free(dgrams *ds);
 static void dgrams_close_done(uv_handle_t *handle);
 
-int dgrams_init(void) {
+void dgrams_init(void) {
     if ( 0 == ds_inited ) {
         InitializeListHead(&ds_list);
         ds_inited = 1;
     }
-
-    return 0;
 }
 
 dgrams *dgrams_add(const char *key, uv_loop_t *loop) {
@@ -98,8 +96,10 @@ void dgrams_clear(void) {
 }
 
 static void dgrams_close(dgrams *ds) {
-    if ( ds->state < u_closing ) {
-        ds->state = u_closing;
+    if ( ds->state < u_closing1 ) {
+        ds->state = u_closing1;
+
+        uv_timer_stop(&ds->timer);
         uv_close((uv_handle_t *)&ds->udp_out, dgrams_close_done);
         uv_close((uv_handle_t *)&ds->timer, dgrams_close_done);
     }

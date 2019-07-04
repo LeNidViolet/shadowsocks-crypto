@@ -30,7 +30,8 @@
 
 enum{
     u_using,
-    u_closing,
+    u_closing1,
+    u_closing2,
     u_dead
 };
 
@@ -69,7 +70,7 @@ typedef struct {
     void *ctx;
 } dgrams;
 
-int dgrams_init(void);
+void dgrams_init(void);
 dgrams *dgrams_add(const char *key, uv_loop_t *loop);
 dgrams *dgrams_find_by_key(const char *key);
 void dgrams_remove(dgrams *ds);
