@@ -221,7 +221,6 @@ static void dnssrv_read_done(
     struct sockaddr* addr;
     int req_ipv4;
     dns_block *block = NULL;
-    int lookup = 1;
     struct addrinfo hints;
 
     (void)flags;
@@ -261,10 +260,7 @@ static void dnssrv_read_done(
     addr = dns_cache_find_ip(parse->queryDomain, req_ipv4);
     if ( addr ) {
         dnssrv_response(block, addr);
-        lookup = 0;
-    }
-
-    if ( lookup ) {
+    } else {
         loop = uv_handle_get_loop((uv_handle_t*)handle);
 
         memset(&hints, 0, sizeof(hints));

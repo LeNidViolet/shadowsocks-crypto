@@ -36,10 +36,6 @@ void tlsflat_notify(int level, const char *format, ...) {
     va_end(ap);
 
     sscrypto_on_msg(level, msg);
-
-BREAK_LABEL:
-
-    return;
 }
 
 /* 解密明文向上传递 */

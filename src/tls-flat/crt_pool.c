@@ -40,7 +40,7 @@ typedef struct {
     size_t count;
 } crt_pool;
 
-static crt_pool pool = {0};
+static crt_pool pool;
 
 static int x509_cn_in_crt(
     const mbedtls_x509_crt *crt,

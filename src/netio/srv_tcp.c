@@ -233,6 +233,7 @@ static void on_connection(uv_stream_t *server, int status) {
     incoming->ss_buf.buf_base = incoming->ss_buf.data_base = incoming->slab;
     incoming->ss_buf.buf_len = sizeof(incoming->slab);
     incoming->ss_buf.data_len = 0;
+
     outgoing->ss_buf.buf_base = outgoing->ss_buf.data_base = outgoing->slab;
     outgoing->ss_buf.buf_len = sizeof(outgoing->slab);
     outgoing->ss_buf.data_len = 0;
@@ -267,7 +268,7 @@ static void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
 }
 
 void conn_read(connection *conn) {
-    ASSERT(conn->rdstate == c_stop);
+    ASSERT(c_stop == conn->rdstate);
 
     if( 0 != uv_read_start(
         &conn->handle.stream,
@@ -641,7 +642,7 @@ static void do_next_server(connection *sender) {
     int new_state = s_max;
     proxy_node *pn = sender->pn;
 
-    ASSERT(pn->state != s_dead);
+    ASSERT(s_dead != pn->state);
     switch (pn->state) {
     case s_handshake:
         new_state = do_handshake(pn);
@@ -892,35 +893,35 @@ BREAK_LABEL:
 static void do_dnsovertcp_packback(proxy_node *pn, struct sockaddr *addr) {
     connection *incoming = &pn->incoming;
     struct sockaddr_in *addr_v4 = (struct sockaddr_in *)addr;
-    unsigned short dnsPktLen;
+    unsigned short pkt_len;
 
     // TODO: 组包回发
-    dnsPktLen = ByteswapUshort(*(unsigned short*)incoming->ss_buf.data_base);
+    pkt_len = ByteswapUshort(*(unsigned short*)incoming->ss_buf.data_base);
     PDNS_HEADER hdr = (PDNS_HEADER)(incoming->ss_buf.data_base + 2);
     hdr->IsResponse = 1;
     hdr->RecursionAvailable = 1;
     hdr->AnswerCount = ByteswapUshort(1);
 
-    char* pos = incoming->ss_buf.data_base + dnsPktLen;
+    char* pos = incoming->ss_buf.data_base + pkt_len;
     *(unsigned short*)pos = 0x0CC0;
     pos += 2;
 
     PDNS_WIRE_RECORD record = (PDNS_WIRE_RECORD)pos;
     // TODO: IPV4 ONLY FOR NOW
-    record->RecordType = ByteswapUshort(1);
+    record->RecordType  = ByteswapUshort(1);
     record->RecordClass = ByteswapUshort(1); // CLASS IN
-    record->TimeToLive = ByteswapUInt32(10);
+    record->TimeToLive  = ByteswapUInt32(10);
     // TODO: IPV4 ONLY FOR NOW
-    record->DataLength = ByteswapUshort(4);
+    record->DataLength  = ByteswapUshort(4);
 
     pos = (char*)(record + 1);
     *(unsigned int*)pos = addr_v4->sin_addr.s_addr;
 
     // TODO: IPV4 ONLY FOR NOW
-    dnsPktLen += 2 + sizeof(DNS_WIRE_RECORD) + 4;
-    *(unsigned short*)incoming->ss_buf.data_base = ByteswapUshort(dnsPktLen);
+    pkt_len += 2 + sizeof(DNS_WIRE_RECORD) + 4;
+    *(unsigned short*)incoming->ss_buf.data_base = ByteswapUshort(pkt_len);
 
-    incoming->ss_buf.data_len = dnsPktLen + 2;
+    incoming->ss_buf.data_len = pkt_len + 2;
 
     conn_write(
         incoming,
