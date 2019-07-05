@@ -178,7 +178,7 @@ static void dgram_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct add
 static void dgram_lookup(dgrams *ds);
 static void dgram_send_local(dgrams *ds, uv_buf_t *buf);
 static void dgram_send_done_local(uv_udp_send_t *req, int status);
-static void dgram_timer_reset(dgrams *dgrams);
+static void dgram_timer_reset(dgrams *ds);
 static void dgram_timer_expire(uv_timer_t *handle);
 
 
@@ -194,11 +194,14 @@ static void dgram_alloc_cb_local(
     (void)suggested_size;
 
     /* Each listening udp handle has an associated buf for recv data */
-    buf_r = uv_handle_get_data(handle);
+    buf_r       = uv_handle_get_data(handle);
     buf->base   = buf_r->buf_base;
     buf->len    = buf_r->buf_len;
 }
 
+/* 只通过一个UDP句柄进行监听. 所以通讯联系是一对多的关系
+ * 每次有数据到来, 都暂停接收数据直到本次数据发送出去
+ */
 static void dgram_read_done_local(
     uv_udp_t *handle, ssize_t nread,
     const uv_buf_t *buf,
@@ -219,8 +222,9 @@ static void dgram_read_done_local(
 
     buf_r = uv_handle_get_data((uv_handle_t*)handle);
     ASSERT(buf_r->buf_base == buf->base);
-    buf_r->data_base = buf_r->buf_base;
-    buf_r->data_len = (size_t)nread;
+
+    buf_r->data_base    = buf_r->buf_base;
+    buf_r->data_len     = (size_t)nread;
 
     /* decrypt udp data */
     if ( 0 != ssnetio_on_dgram_decrypt(buf_r, 0) ) {
@@ -280,6 +284,7 @@ static void dgram_lookup(dgrams *ds) {
     if ( 0 == uv_ip4_addr(ds->peer.host, ds->peer.port, &ds->remote.addr4) ||
          0 == uv_ip6_addr(ds->peer.host, ds->peer.port, &ds->remote.addr6)) {
 
+        /* 尝试替换成可读性更高的域名 */
         host = dns_cache_find_host(&ds->remote.addr);
         if ( host ) {
             memset(ds->peer.host, 0, sizeof(ds->peer.host));
@@ -362,18 +367,18 @@ static void dgram_getaddrinfo_done(
 }
 
 static void dgram_send_remote(dgrams *ds) {
-    uv_buf_t buf;
-    buf_range *ss_buf;
+    uv_buf_t buf_t;
+    buf_range *buf;
 
-    ss_buf = uv_handle_get_data((uv_handle_t*)ds->udp_in);
-    buf = uv_buf_init(ss_buf->data_base, (unsigned int)ss_buf->data_len);
+    buf = uv_handle_get_data((uv_handle_t*)ds->udp_in);
+    buf_t = uv_buf_init(buf->data_base, (unsigned int)buf->data_len);
 
-    ssnetio_on_plain_dgram(ss_buf, STREAM_UP, ds->ctx);
+    ssnetio_on_plain_dgram(buf, STREAM_UP, ds->ctx);
 
     if ( 0 == uv_udp_send(
         &ds->req_c,
         &ds->udp_out,
-        &buf,
+        &buf_t,
         1,
         &ds->remote.addr,
         dgram_send_done_remote) ) {
@@ -381,6 +386,7 @@ static void dgram_send_remote(dgrams *ds) {
         dgram_timer_reset(ds);
     } else {
         CHECK(0 == dgram_read_local(ds->udp_in));
+        dgrams_remove(ds);
     }
 }
 
@@ -432,8 +438,8 @@ static void dgram_alloc_cb_remote(
     (void)suggested_size;
 
     ds = uv_handle_get_data(handle);
-    buf->base = ds->ss_buf.buf_base;
-    buf->len = MAX_SS_UDP_PAYLOAD_LEN;
+    buf->base   = ds->ss_buf.buf_base;
+    buf->len    = MAX_SS_UDP_PAYLOAD_LEN;
 }
 
 static void dgram_read_done_remote(
@@ -443,8 +449,8 @@ static void dgram_read_done_remote(
     unsigned flags) {
 
     dgrams *ds;
-    buf_range *ss_buf;
-    uv_buf_t buf_s;
+    buf_range *buf_r;
+    uv_buf_t buf_t;
     int hdr_len = 0;
     char bs[19];
 
@@ -455,13 +461,13 @@ static void dgram_read_done_remote(
         BREAK_NOW;
 
     ds = CONTAINER_OF(handle, dgrams, udp_out);
-    ss_buf = &ds->ss_buf;
-    ASSERT(buf->base == ss_buf->buf_base);
+    buf_r = &ds->ss_buf;
+    ASSERT(buf->base == buf_r->buf_base);
 
-    ss_buf->data_base = ss_buf->buf_base;
-    ss_buf->data_len = (size_t)nread;
+    buf_r->data_base    = buf_r->buf_base;
+    buf_r->data_len     = (size_t)nread;
 
-    ssnetio_on_plain_dgram(ss_buf, STREAM_DOWN, ds->ctx);
+    ssnetio_on_plain_dgram(buf_r, STREAM_DOWN, ds->ctx);
 
     /* pack ss hdr */
     if ( ds->remote.addr.sa_family == AF_INET ) {
@@ -479,20 +485,21 @@ static void dgram_read_done_remote(
     }
 
     /* Insert ss head to the beginning of the buf */
-    memmove(ss_buf->buf_base + hdr_len, ss_buf->buf_base, ss_buf->data_len);
-    ss_buf->data_len += hdr_len;
-    memcpy(ss_buf->buf_base, bs, hdr_len);
+    memmove(buf_r->buf_base + hdr_len, buf_r->buf_base, buf_r->data_len);
+    buf_r->data_len += hdr_len;
+    memcpy(buf_r->buf_base, bs, hdr_len);
 
 
-    if ( 0 != ssnetio_on_dgram_encrypt(ss_buf, 0) ) {
+    if ( 0 != ssnetio_on_dgram_encrypt(buf_r, 0) ) {
         ssnetio_on_msg(ERROR, "encrypt dgram packet failed");
         BREAK_NOW;
     }
 
+    /* 发送完成之前停止接收 */
     CHECK(0 == uv_udp_recv_stop(handle));
 
-    buf_s = uv_buf_init(ss_buf->data_base, (unsigned int)ss_buf->data_len);
-    dgram_send_local(ds, &buf_s);
+    buf_t = uv_buf_init(buf_r->data_base, (unsigned int)buf_r->data_len);
+    dgram_send_local(ds, &buf_t);
 
 BREAK_LABEL:
 

@@ -49,7 +49,7 @@ typedef struct {
 
 static const int dns_handle_max = 8;
 static int dns_handle_index = 0;
-static uv_udp_t *dns_handles[dns_handle_max];
+static uv_udp_t *dns_handles[dns_handle_max] = { NULL };
 
 static uv_signal_t dns_signal_handle;
 static int dns_signal_inited = 0;

@@ -28,7 +28,7 @@
 // ==========
 static const int tcp_handle_max = 8;
 static int tcp_handle_index = 0;
-static uv_tcp_t *tcp_handles[tcp_handle_max];
+static uv_tcp_t *tcp_handles[tcp_handle_max] = { NULL };
 
 static uv_signal_t tcp_signal_handle;
 static int tcp_signal_inited = 0;
