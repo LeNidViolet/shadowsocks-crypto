@@ -97,72 +97,60 @@ void ssnetio_on_dgram_teardown(void *ctx) {
 
 int ssnetio_on_stream_encrypt(connection *conn, int offset) {
     int ret;
-    buf_range mr;
+    buf_range buf;
 
-    mr.buf_base = conn->ss_buf.buf_base;
-    mr.buf_len = conn->ss_buf.buf_len;
-    mr.data_base = mr.buf_base + offset;
-    mr.data_len = (size_t)conn->result - offset;
+    buf.buf_base = conn->ss_buf.buf_base;
+    buf.buf_len = conn->ss_buf.buf_len;
+    buf.data_base = buf.buf_base + offset;
+    buf.data_len = (size_t)conn->result - offset;
 
     conn->ss_buf.data_base = conn->ss_buf.buf_base + offset;
     conn->ss_buf.data_len = (size_t)conn->result - offset;
-    ret = sscrypto_on_stream_encrypt(&mr, conn->pn->ctx);
+    ret = sscrypto_on_stream_encrypt(&buf, conn->pn->ctx);
 
-    conn->ss_buf.data_base = mr.data_base;
-    conn->ss_buf.data_len = mr.data_len;
+    conn->ss_buf.data_base = buf.data_base;
+    conn->ss_buf.data_len = buf.data_len;
 
     return ret;
 }
 
 int ssnetio_on_stream_decrypt(connection *conn, int offset) {
     int ret;
-    buf_range mr;
+    buf_range buf;
 
-    mr.buf_base = conn->ss_buf.buf_base;
-    mr.buf_len = conn->ss_buf.buf_len;
-    mr.data_base = mr.buf_base + offset;
-    mr.data_len = (size_t)conn->result - offset;
+    buf.buf_base = conn->ss_buf.buf_base;
+    buf.buf_len = conn->ss_buf.buf_len;
+    buf.data_base = buf.buf_base + offset;
+    buf.data_len = (size_t)conn->result - offset;
 
     conn->ss_buf.data_base = conn->ss_buf.buf_base + offset;
     conn->ss_buf.data_len = (size_t)conn->result - offset;
-    ret = sscrypto_on_stream_decrypt(&mr, conn->pn->ctx);
+    ret = sscrypto_on_stream_decrypt(&buf, conn->pn->ctx);
 
-    conn->ss_buf.data_base = mr.data_base;
-    conn->ss_buf.data_len = mr.data_len;
+    conn->ss_buf.data_base = buf.data_base;
+    conn->ss_buf.data_len = buf.data_len;
 
     return ret;
 }
 
 int ssnetio_on_dgram_encrypt(buf_range *buf, int offset) {
     int ret;
-    buf_range mr;
 
-    mr.buf_base = buf->buf_base;
-    mr.buf_len = buf->buf_len;
-    mr.data_base = mr.buf_base + offset;
-    mr.data_len = buf->data_len - offset;
+    buf->data_base = buf->buf_base + offset;
+    buf->data_len = buf->data_len - offset;
 
-    ret = sscrypto_on_dgram_encrypt(&mr);
-
-    buf->data_base = mr.data_base;
-    buf->data_len = mr.data_len;
+    ret = sscrypto_on_dgram_encrypt(buf);
 
     return ret;
 }
 
 int ssnetio_on_dgram_decrypt(buf_range *buf, int offset) {
     int ret;
-    buf_range mr;
 
-    mr.buf_base = buf->buf_base;
-    mr.buf_len = buf->buf_len;
-    mr.data_base = mr.buf_base + offset;
-    mr.data_len = buf->data_len - offset;
+    buf->data_base = buf->buf_base + offset;
+    buf->data_len = buf->data_len - offset;
 
-    ret = sscrypto_on_dgram_decrypt(&mr);
-
-    buf->data_base = mr.data_base;
-    buf->data_len = mr.data_len;
+    ret = sscrypto_on_dgram_decrypt(buf);
 
     return ret;
 }
@@ -170,15 +158,9 @@ int ssnetio_on_dgram_decrypt(buf_range *buf, int offset) {
 int ssnetio_on_plain_stream(connection *conn) {
     int action;
     int direct = conn == &conn->pn->incoming ? STREAM_UP : STREAM_DOWN;
-    buf_range mr;
-
-    mr.buf_base = conn->ss_buf.buf_base;
-    mr.buf_len = conn->ss_buf.buf_len;
-    mr.data_base = conn->ss_buf.data_base;
-    mr.data_len = conn->ss_buf.data_len;
 
     action = sscrypto_on_plain_stream(
-        &mr,
+        &conn->ss_buf,
         direct,
         conn->pn->ctx);
 
@@ -186,17 +168,8 @@ int ssnetio_on_plain_stream(connection *conn) {
 }
 
 void ssnetio_on_plain_dgram(buf_range *buf, int direct, void *ctx) {
-    buf_range mr;
 
-    mr.buf_base = buf->buf_base;
-    mr.buf_len = buf->buf_len;
-    mr.data_base = buf->data_base;
-    mr.data_len = buf->data_len;
-
-    sscrypto_on_plain_dgram(
-        &mr,
-        direct,
-        ctx);
+    sscrypto_on_plain_dgram(buf, direct, ctx);
 }
 
 /* SERVER SIDE ONLY */

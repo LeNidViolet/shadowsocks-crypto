@@ -213,7 +213,7 @@ int crt_pool_add(
     ++pool.count;
 
     tlsflat_notify(
-        4,
+        INFO,
         "CRT POOL ADD DOMAIN [%s] TOTAL[%d]",
         domain,
         pool.count);

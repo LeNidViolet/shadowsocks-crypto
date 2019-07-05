@@ -84,8 +84,8 @@ typedef struct {
         struct sockaddr_in6 addr6;
         struct sockaddr_in addr4;
         struct sockaddr addr;
-        char slab[MAX_SS_TCP_FRAME_LEN];
     } t;
+    char slab[MAX_SS_TCP_FRAME_LEN];
 
     address peer;
     buf_range ss_buf;
@@ -118,8 +118,6 @@ enum {
     s5_invalid_version = -2,
     s5_invalid_method = -3
 };
-
-int s5_simple_check(const char *data, size_t data_len);
 
 /* Parse the host/ip and port from incoming data.
  * Set data_base AND data_len, to the actual data range.

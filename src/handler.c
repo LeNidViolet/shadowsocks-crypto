@@ -328,10 +328,6 @@ int sscrypto_on_stream_encrypt(buf_range *buf, void *ctx) {
 
 BREAK_LABEL:
 
-    if ( 0 != ret) {
-        sscrypto_on_msg(1, "Stream Encrypt Failed");
-    }
-
     return ret;
 }
 
@@ -386,10 +382,6 @@ int sscrypto_on_stream_decrypt(buf_range *buf, void *ctx) {
 
 BREAK_LABEL:
 
-    if ( 0 != ret) {
-        sscrypto_on_msg(1, "Stream Decrypt Failed");
-    }
-
     return ret;
 }
 
@@ -439,10 +431,6 @@ int sscrypto_on_dgram_encrypt(buf_range *buf) {
 
 BREAK_LABEL:
 
-    if ( 0 != ret) {
-        sscrypto_on_msg(1, "Dgram Encrypt Failed");
-    }
-
     return ret;
 }
 
@@ -482,10 +470,6 @@ int sscrypto_on_dgram_decrypt(buf_range *buf) {
     buf->data_len = decrypt_len;
 
 BREAK_LABEL:
-
-    if ( 0 != ret) {
-        sscrypto_on_msg(1, "Dgram Decrypt Failed");
-    }
 
     return ret;
 }

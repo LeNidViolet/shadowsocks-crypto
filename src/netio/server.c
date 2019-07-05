@@ -66,9 +66,17 @@ void ssnetio_server_port(ioctl_port *port) {
 }
 
 
+static void server_stop(void) {
+    server_dns_stop();
+    server_dgram_stop();
+    server_tcp_stop();
+    uv_stop(uv_default_loop());
+}
+
 static void async_cb(uv_async_t* handle) {
     (void)handle;
-    uv_stop(uv_default_loop());
+
+    server_stop();
 }
 
 void ssnetio_server_stop(void) {
@@ -100,7 +108,7 @@ static int server_run(sscrypto_ctx *ctx) {
                          NULL,
                          &hints);
     if ( 0 != ret ) {
-        ssnetio_on_msg(1, "uv_getaddrinfo failed: %s", uv_strerror(ret));
+        ssnetio_on_msg(ERROR, "uv_getaddrinfo failed: %s", uv_strerror(ret));
         BREAK_NOW;
     }
 
@@ -131,7 +139,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     loop = uv_req_get_data((uv_req_t *)req);
 
     if ( status < 0 ) {
-        ssnetio_on_msg(1, "uv_getaddrinfo failed: %s", uv_strerror(status));
+        ssnetio_on_msg(ERROR, "uv_getaddrinfo failed: %s", uv_strerror(status));
         BREAK_NOW;
     }
 
@@ -159,7 +167,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_tcp_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                1,
+                FATAL,
                 "tcp server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.host,
@@ -171,7 +179,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_dgram_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                1,
+                FATAL,
                 "dgram server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.host,
@@ -184,7 +192,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_dns_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                1,
+                FATAL,
                 "dns server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.host,
@@ -201,9 +209,7 @@ BREAK_LABEL:
         uv_freeaddrinfo(addrs);
 
     if ( 0 != ret ) {
-        server_tcp_stop();
-        server_dgram_stop();
-        server_dns_stop();
+        server_stop();
     }
 }
 

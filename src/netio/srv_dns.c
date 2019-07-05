@@ -235,7 +235,7 @@ static void dnssrv_read_done(
 
     parse = ParseDnsRecord(buf->base, block->query_len);
     if ( !parse ) {
-        ssnetio_on_msg(1, "dns record parse failed length[%d]", block->query_len);
+        ssnetio_on_msg(WARN, "dns record parse failed length[%d]", block->query_len);
         BREAK_NOW;
     }
 
@@ -244,7 +244,7 @@ static void dnssrv_read_done(
         (parse->queryType != DNS_QUERY_TYPE_IPV4 && parse->queryType != DNS_QUERY_TYPE_IPV6) ) {
 
         ssnetio_on_msg(
-            1,
+            WARN,
             "unknow dns queryclass[%d] or querytype[%d]",
             parse->queryClass,
             parse->queryType);
@@ -280,7 +280,7 @@ static void dnssrv_read_done(
                                  parse->queryDomain,
                                  NULL,
                                  &hints) ) {
-            ssnetio_on_msg(1, "dns uv_getaddrinfo failed [%s]", block->domain);
+            ssnetio_on_msg(ERROR, "dns uv_getaddrinfo failed [%s]", block->domain);
             BREAK_NOW;
         }
     }

@@ -126,5 +126,12 @@ enum {
     TERMINATE
 };
 
+enum {
+    FATAL = 1,
+    ERROR = 2,
+    WARN = 3,
+    INFO = 4,
+    DEBUG = 5,
+};
 
 #endif //SHADOWSOCKS_CRYPTO_COMM_H

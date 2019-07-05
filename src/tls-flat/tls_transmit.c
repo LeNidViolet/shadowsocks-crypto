@@ -45,7 +45,7 @@ int handle_tls_transmit(tls_session *ts) {
         ts_p->buf_out.buf_len);
 
     if( MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY == ret || 0 == ret ) {
-        tlsflat_notify(4, "%4d [%s] MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY (%d) ON %s SIDE",
+        tlsflat_notify(DEBUG, "%4d [%s] MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY (%d) ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ret,
@@ -56,7 +56,7 @@ int handle_tls_transmit(tls_session *ts) {
     }
 
     if ( MBEDTLS_ERR_NET_CONN_RESET == ret ) {
-        tlsflat_notify(2, "%4d [%s] MBEDTLS_ERR_NET_CONN_RESET ON %s SIDE",
+        tlsflat_notify(WARN, "%4d [%s] MBEDTLS_ERR_NET_CONN_RESET ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
@@ -66,7 +66,7 @@ int handle_tls_transmit(tls_session *ts) {
     }
 
     if ( MBEDTLS_ERR_SSL_CLIENT_RECONNECT == ret ) {
-        tlsflat_notify(2, "%4d [%s] MBEDTLS_ERR_SSL_CLIENT_RECONNECT ON %s SIDE",
+        tlsflat_notify(WARN, "%4d [%s] MBEDTLS_ERR_SSL_CLIENT_RECONNECT ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
@@ -77,7 +77,7 @@ int handle_tls_transmit(tls_session *ts) {
     }
 
     if ( MBEDTLS_ERR_SSL_WANT_READ == ret ) {
-        tlsflat_notify(4, "%4d [%s] mbedtls_ssl_read MBEDTLS_ERR_SSL_WANT_READ %s SIDE",
+        tlsflat_notify(DEBUG, "%4d [%s] mbedtls_ssl_read MBEDTLS_ERR_SSL_WANT_READ %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
@@ -91,7 +91,7 @@ int handle_tls_transmit(tls_session *ts) {
     ASSERT(MBEDTLS_ERR_SSL_WANT_WRITE != ret);
 
     if ( ret < 0 ) {
-        tlsflat_notify(1, "%4d [%s] mbedtls_ssl_read FAILED[%d] ON %s SIDE",
+        tlsflat_notify(ERROR, "%4d [%s] mbedtls_ssl_read FAILED[%d] ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ret,

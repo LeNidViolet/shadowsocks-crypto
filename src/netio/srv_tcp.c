@@ -108,7 +108,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     ret = uv_tcp_bind(tcp_handle, addr, 0);
     if ( 0 != ret ) {
         ssnetio_on_msg(
-            1,
+            FATAL,
             "tcp bind to %s:%d failed: %s",
             address.host,
             address.port,
@@ -119,7 +119,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     ret = uv_listen((uv_stream_t *)tcp_handle, SOMAXCONN, on_connection);
     if ( 0 != ret ) {
         ssnetio_on_msg(
-            1,
+            FATAL,
             "tcp listen to %s:%d failed: %s",
             address.host,
             address.port,
@@ -230,11 +230,11 @@ static void on_connection(uv_stream_t *server, int status) {
     outgoing->idle_timeout = srv_ctx.config.idel_timeout;
     CHECK(0 == uv_timer_init(loop, &outgoing->timer_handle));
 
-    incoming->ss_buf.buf_base = incoming->ss_buf.data_base = incoming->t.slab;
-    incoming->ss_buf.buf_len = sizeof(incoming->t.slab);
+    incoming->ss_buf.buf_base = incoming->ss_buf.data_base = incoming->slab;
+    incoming->ss_buf.buf_len = sizeof(incoming->slab);
     incoming->ss_buf.data_len = 0;
-    outgoing->ss_buf.buf_base = outgoing->ss_buf.data_base = outgoing->t.slab;
-    outgoing->ss_buf.buf_len = sizeof(outgoing->t.slab);
+    outgoing->ss_buf.buf_base = outgoing->ss_buf.data_base = outgoing->slab;
+    outgoing->ss_buf.buf_len = sizeof(outgoing->slab);
     outgoing->ss_buf.data_len = 0;
 
     CHECK(0 == str_tcp_endpoint(&incoming->handle.tcp, peer, &incoming->peer));
@@ -412,7 +412,7 @@ static int conn_cycle(const char *who, connection *a, connection *b) {
     if ( a->result < 0 ) {
         if ( UV_EOF != a->result ) {
             ssnetio_on_msg(
-                1,
+                ERROR,
                 "%4d %s error: %s [%s]",
                 a->pn->index,
                 who,
@@ -557,7 +557,7 @@ int do_kill(proxy_node *pn) {
     if ( 0 != pn->outstanding ) {
         /* Wait for uncomplete operations */
         ssnetio_on_msg(
-            4,
+            INFO,
             "%4d waitting outstanding operation: %d [%s]",
             pn->index, pn->outstanding, pn->link_info);
         new_state = s_kill;
@@ -764,7 +764,7 @@ static int do_handshake(proxy_node *pn) {
     incoming = &pn->incoming;
 
     if ( incoming->result < 0 ) {
-        ssnetio_on_msg(1, "%4d Handshake Read Error: %s",
+        ssnetio_on_msg(ERROR, "%4d handshake read error: %s",
                        pn->index, uv_strerror((int)incoming->result));
         new_state = do_kill(pn);
         BREAK_NOW;
@@ -775,7 +775,7 @@ static int do_handshake(proxy_node *pn) {
     incoming->rdstate = c_stop;
 
     if ( 0 != ssnetio_on_stream_decrypt(incoming, 0) ) {
-        ssnetio_on_msg(1, "%4d Handshake Data Decrypt Failed", pn->index);
+        ssnetio_on_msg(ERROR, "%4d handshake data decrypt failed", pn->index);
         new_state = do_kill(pn);
         BREAK_NOW;
     }
@@ -783,7 +783,7 @@ static int do_handshake(proxy_node *pn) {
     /* Parser to get dest address */
     ret = s5_parse_addr(&incoming->ss_buf, &pn->outgoing.peer);
     if ( 0 != ret ) {
-        ssnetio_on_msg(1, "%4d Handshake Parse Addr Error", pn->index);
+        ssnetio_on_msg(ERROR, "%4d handshake parse addr error", pn->index);
         new_state = do_kill(pn);
         BREAK_NOW;
     }
@@ -853,7 +853,7 @@ static int do_req_lookup(proxy_node *pn) {
     outgoing = &pn->outgoing;
 
     if ( outgoing->result < 0 ) {
-        ssnetio_on_msg(1, "%4d Lookup Error For %s : %s",
+        ssnetio_on_msg(ERROR, "%4d lookup error for %s : %s",
                        pn->index,
                        outgoing->peer.host,
                        uv_strerror((int)outgoing->result));
@@ -937,7 +937,7 @@ static int do_dnsovertcp_lookup(proxy_node *pn) {
     outgoing = &pn->outgoing;
 
     if ( outgoing->result < 0 ) {
-        ssnetio_on_msg(1, "%4d Lookup Error For %s : %s",
+        ssnetio_on_msg(ERROR, "%4d lookup error for %s : %s",
                        pn->index,
                        outgoing->peer.host,
                        uv_strerror((int)outgoing->result));
@@ -974,8 +974,8 @@ static int do_req_connect(proxy_node *pn) {
 
     if ( 0 != outgoing->result ) {
         ssnetio_on_msg(
-            1,
-            "%4d Connect to %s:%d failed: %s",
+            ERROR,
+            "%4d connect to %s:%d failed: %s",
             pn->index,
             outgoing->peer.host,
             outgoing->peer.port,

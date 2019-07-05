@@ -28,7 +28,7 @@
 // ==========
 static const int dgram_handle_max = 8;
 static int dgram_handle_index = 0;
-static uv_udp_t *dgram_handles[dgram_handle_max];
+static uv_udp_t *dgram_handles[dgram_handle_max] = { NULL };
 
 static uv_signal_t dgram_signal_handle;
 static int dgram_signal_inited = 0;
@@ -195,8 +195,8 @@ static void dgram_alloc_cb_local(
 
     /* Each listening udp handle has an associated buf for recv data */
     buf_r = uv_handle_get_data(handle);
-    buf->base = buf_r->buf_base;
-    buf->len = buf_r->buf_len;
+    buf->base   = buf_r->buf_base;
+    buf->len    = buf_r->buf_len;
 }
 
 static void dgram_read_done_local(
@@ -224,14 +224,14 @@ static void dgram_read_done_local(
 
     /* decrypt udp data */
     if ( 0 != ssnetio_on_dgram_decrypt(buf_r, 0) ) {
-        ssnetio_on_msg(1, "Decrypt dgram packet failed");
+        ssnetio_on_msg(ERROR, "decrypt dgram packet failed");
         BREAK_NOW;
     }
     BREAK_ON_NULL(buf_r->data_len);
 
     /* obtain address info */
     if ( 0 != s5_parse_addr(buf_r, &srv_addr) ) {
-        ssnetio_on_msg(1, "Parse dgram packet address failed");
+        ssnetio_on_msg(ERROR, "parse dgram packet address failed");
         BREAK_NOW;
     }
 
@@ -253,6 +253,7 @@ static void dgram_read_done_local(
         loop = uv_handle_get_loop((uv_handle_t*)handle);
 
         ds = dgrams_add(key, loop);
+        CHECK(NULL != ds);
         ds->udp_in = handle;
         sockaddr_cpy(addr, &ds->local.addr);
         ds->peer = srv_addr;
@@ -348,8 +349,8 @@ static void dgram_getaddrinfo_done(
         dgram_send_remote(ds);
     } else {
         ssnetio_on_msg(
-            1,
-            "Dgram getaddrinfo failed: %s, domain: %s",
+            ERROR,
+            "dgram getaddrinfo failed: %s, domain: %s",
             uv_strerror(status),
             ds->peer.host);
 
@@ -484,7 +485,7 @@ static void dgram_read_done_remote(
 
 
     if ( 0 != ssnetio_on_dgram_encrypt(ss_buf, 0) ) {
-        ssnetio_on_msg(1, "Encrypt dgram packet failed");
+        ssnetio_on_msg(ERROR, "encrypt dgram packet failed");
         BREAK_NOW;
     }
 

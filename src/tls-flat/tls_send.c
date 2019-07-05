@@ -48,7 +48,7 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
         break;
     case Write_Sending:
         tlsflat_notify(
-            2,
+            WARN,
             "%4d [%s] SENDING STH WHILE BUSYING AT %s SIDE",
             ss->index,
             ss->sni_name[0] ? ss->sni_name : ss->remote.host,
@@ -118,7 +118,7 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
         /* 继续触发流程下一步 */
         tls_send_done_do_next(ts);
     } else {
-        tlsflat_notify(1, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
+        tlsflat_notify(ERROR, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
                        ss->index,
                        ss->sni_name[0] ? ss->sni_name : ss->remote.host,
                        ts->is_local ? "SERVER" : "CLIENT",
