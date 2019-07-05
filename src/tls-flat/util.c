@@ -54,6 +54,6 @@ void buf_range_relloc(buf_range *mr, size_t size) {
         free(mr->buf_base);
         mr->buf_base = mr->data_base = tmp;
         mr->buf_len = size;
-        /* No change for mr->data_len */
+        /* No change for buf->data_len */
     }
 }

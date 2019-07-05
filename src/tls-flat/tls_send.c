@@ -28,26 +28,26 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx);
 extern ioctl_port ioctlp;
 
 typedef struct {
-    buf_range mr;
+    buf_range buf;
     size_t snd_len;
     tls_session *ts;
-} TLS_SND_CTX;
+} tls_snd_ctx;
 
 int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
     tls_session *ts;
     stream_session *ss;
     int direct, ret;
-    TLS_SND_CTX *tls_snd_ctx = NULL;
+    tls_snd_ctx *snd_ctx = NULL;
 
     ts = (tls_session *)ctx;
     ss = ts->ss;
     direct = ts->is_local ? STREAM_DOWN : STREAM_UP;
 
     switch ( ts->wrstate ) {
-    case Write_Idel:
+    case write_idel:
         break;
-    case Write_Sending:
-        tlsflat_notify(
+    case write_sending:
+        tlsflat_on_msg(
             WARN,
             "%4d [%s] SENDING STH WHILE BUSYING AT %s SIDE",
             ss->index,
@@ -56,39 +56,39 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
         );
         ret = -1;
         BREAK_NOW;
-    case Write_Waitack:
+    case write_waitack:
         /* 确认'上次'发送数据结果 */
         ASSERT(ts->wait_ack_len);
         ret = ts->wait_ack_len;
 
         ts->wait_ack_len = 0;
-        ts->wrstate = Write_Idel;
+        ts->wrstate = write_idel;
 
         BREAK_NOW;
     default:
         UNREACHABLE();
     }
 
-    tls_snd_ctx = malloc(sizeof(*tls_snd_ctx));
-    CHECK(tls_snd_ctx);
-    memset(tls_snd_ctx, 0, sizeof(*tls_snd_ctx));
-    buf_range_alloc(&tls_snd_ctx->mr, len + 64);
-    memcpy(tls_snd_ctx->mr.buf_base, buf, len);
-    tls_snd_ctx->mr.data_len = len;
-    tls_snd_ctx->snd_len = len;
-    tls_snd_ctx->ts = ts;
+    snd_ctx = malloc(sizeof(*snd_ctx));
+    CHECK(snd_ctx);
+    memset(snd_ctx, 0, sizeof(*snd_ctx));
+    buf_range_alloc(&snd_ctx->buf, len);
+    memcpy(snd_ctx->buf.buf_base, buf, len);
+    snd_ctx->buf.data_len = len;
+    snd_ctx->snd_len = len;
+    snd_ctx->ts = ts;
 
     ret = ioctlp.write_stream_out(
-        &tls_snd_ctx->mr,
+        &snd_ctx->buf,
         direct,
         ts->ss->stream_id,
         on_tls_send_done,
-        tls_snd_ctx);
+        snd_ctx);
     ASSERT(0 == ret);
 
     /* 这里返回 MBEDTLS_ERR_SSL_WANT_WRITE 之后mbedtls会处于'等待'状态 */
-    /* 接下来的流程需要on_tls_send_done再调用至此, 并携带状态 Write_Waitack 来触发 */
-    ts->wrstate = Write_Sending;
+    /* 接下来的流程需要on_tls_send_done再调用至此, 并携带状态 write_waitack 来触发 */
+    ts->wrstate = write_sending;
     ret = MBEDTLS_ERR_SSL_WANT_WRITE;
 
 BREAK_LABEL:
@@ -99,26 +99,26 @@ BREAK_LABEL:
 static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
     stream_session *ss;
     tls_session *ts;
-    TLS_SND_CTX *tls_snd_ctx = NULL;
+    tls_snd_ctx *snd_ctx = NULL;
 
     (void)direct;
     (void)ctx;
 
-    tls_snd_ctx = (TLS_SND_CTX *)param;
-    CHECK(tls_snd_ctx);
-    ts = tls_snd_ctx->ts;
+    snd_ctx = (tls_snd_ctx*)param;
+    CHECK(snd_ctx);
+    ts = snd_ctx->ts;
     ss = ts->ss;
 
-    ASSERT(Write_Sending == ts->wrstate);
+    ASSERT(write_sending == ts->wrstate);
 
     if ( 0 == status ) {
-        ts->wrstate = Write_Waitack;
-        ts->wait_ack_len = (int)tls_snd_ctx->snd_len;
+        ts->wrstate = write_waitack;
+        ts->wait_ack_len = (int)snd_ctx->snd_len;
 
         /* 继续触发流程下一步 */
         tls_send_done_do_next(ts);
     } else {
-        tlsflat_notify(ERROR, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
+        tlsflat_on_msg(ERROR, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
                        ss->index,
                        ss->sni_name[0] ? ss->sni_name : ss->remote.host,
                        ts->is_local ? "SERVER" : "CLIENT",
@@ -126,6 +126,6 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
         ss->closing = 1;
     }
 
-    buf_range_free(&tls_snd_ctx->mr);
-    free(tls_snd_ctx);
+    buf_range_free(&snd_ctx->buf);
+    free(snd_ctx);
 }

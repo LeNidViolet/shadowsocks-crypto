@@ -35,21 +35,23 @@ typedef struct {
     mbedtls_pk_context *pk;
 } crt_node;
 
-typedef struct {
-    LIST_ENTRY list;
-    size_t count;
-} crt_pool;
-
-static crt_pool pool;
+static LIST_ENTRY pool_list;
+static int pool_inited = 0;
+static int pool_ncrt = 0;
 
 static int x509_cn_in_crt(
     const mbedtls_x509_crt *crt,
     const char *cn);
 static int domain_in_crt_pool(const char *domain);
 
+
+
 int crt_pool_init(void) {
-    InitializeListHead(&pool.list);
-    pool.count = 0;
+    if ( 0 == pool_inited ) {
+        InitializeListHead(&pool_list);
+
+        pool_inited = 1;
+    }
 
     return 0;
 }
@@ -58,19 +60,16 @@ int crt_pool_get(
     const char *domain,
     mbedtls_x509_crt **crt,
     mbedtls_pk_context **pk) {
+
     crt_node *cn;
-    char buf[128] = {0};
-    size_t len;
     int ret = -1;
 
-    len = strlen(domain);
-    BREAK_ON_FALSE(len > 0 && len < sizeof(buf));
-    memcpy(buf, domain, len);
+    BREAK_ON_NULL(domain);
 
-    for ( PLIST_ENTRY nextlist = pool.list.Flink; nextlist != &pool.list; nextlist = nextlist->Flink ) {
+    for ( PLIST_ENTRY nextlist = pool_list.Flink; nextlist != &pool_list; nextlist = nextlist->Flink ) {
         cn = CONTAINER_OF(nextlist, crt_node, list);
 
-        ret = x509_cn_in_crt(cn->crt, buf);
+        ret = x509_cn_in_crt(cn->crt, domain);
         if ( ret == 0 ) {
             *crt = cn->crt;
             *pk = cn->pk;
@@ -166,16 +165,16 @@ static int x509_cn_in_crt(
 
     if ( crt->ext_types & MBEDTLS_X509_EXT_SUBJECT_ALT_NAME) {
         for ( cur = &crt->subject_alt_names; cur != NULL; cur = cur->next ) {
-            if ( crt_check_cn(&cur->buf, cn, cn_len) == 0 ) {
+            if ( 0 == crt_check_cn(&cur->buf, cn, cn_len) ) {
                 ret = 0;
                 break;
             }
         }
-    }
-    else {
+    } else {
+        /* 如果不包含 subject alt name. 则直接使用 subject 来判断 */
         for ( name = &crt->subject; name != NULL; name = name->next ) {
-            if ( MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0 &&
-                 crt_check_cn(&name->val, cn, cn_len) == 0 ) {
+            if ( 0 == MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) &&
+                 0 == crt_check_cn(&name->val, cn, cn_len) ) {
                 ret = 0;
                 break;
             }
@@ -190,6 +189,7 @@ int crt_pool_add(
     const char *domain,
     mbedtls_x509_crt *crt,
     mbedtls_pk_context *pk) {
+
     int ret = -1;
     crt_node *cn;
     size_t len;
@@ -209,14 +209,14 @@ int crt_pool_add(
     cn->pk = pk;
     cn->crt = crt;
 
-    InsertHeadList(&pool.list, &cn->list);
-    ++pool.count;
+    InsertHeadList(&pool_list, &cn->list);
+    ++pool_ncrt;
 
-    tlsflat_notify(
+    tlsflat_on_msg(
         INFO,
         "CRT POOL ADD DOMAIN [%s] TOTAL[%d]",
         domain,
-        pool.count);
+        pool_ncrt);
 
     ret = 0;
 
@@ -243,7 +243,7 @@ static int domain_in_crt_pool(const char *domain) {
     BREAK_ON_FALSE(len > 0 && len < sizeof(buf));
     memcpy(buf, domain, len);
 
-    for ( PLIST_ENTRY nextlist = pool.list.Flink; nextlist != &pool.list; nextlist = nextlist->Flink ) {
+    for ( PLIST_ENTRY nextlist = pool_list.Flink; nextlist != &pool_list; nextlist = nextlist->Flink ) {
         cn = CONTAINER_OF(nextlist, crt_node, list);
 
         ret = x509_cn_in_crt(cn->crt, buf);
@@ -261,8 +261,8 @@ void crt_pool_clear(void) {
     crt_node *cn;
     PLIST_ENTRY list;
 
-    while (!IsListEmpty(&pool.list)) {
-        list = RemoveHeadList(&pool.list);
+    while (!IsListEmpty(&pool_list)) {
+        list = RemoveHeadList(&pool_list);
         cn = CONTAINER_OF(list, crt_node, list);
 
         cn->pk = NULL;
@@ -271,8 +271,11 @@ void crt_pool_clear(void) {
         cn->crt = NULL;
         free(cn);
 
-        pool.count--;
+        pool_ncrt--;
     }
 
-    ASSERT(0 == pool.count);
+    ASSERT(0 == pool_ncrt);
+
+    if ( 0 == pool_ncrt )
+        printf("cert cache return to 0\n");
 }

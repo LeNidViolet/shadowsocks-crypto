@@ -32,16 +32,16 @@ int handle_tls_handshake(tls_session *ts) {
     mbedtls_x509_crt *crt;
     mbedtls_pk_context *pk;
 
-    ASSERT(Tls_HandShaking == ts->tls_state);
+    ASSERT(tls_handshaking == ts->tls_state);
     ss = ts->ss;
 
     ret = mbedtls_ssl_handshake(&ts->ssl);
     switch ( ret ) {
     case 0:
-        ts->tls_state = Tls_Transmitting;
+        ts->tls_state = tls_transmitting;
 
         if ( ts->is_local ) {
-            tlsflat_notify(
+            tlsflat_on_msg(
                 INFO,
                 "%4d [%s] SSL HANDSHAKE DONE",
                 ss->index,
@@ -60,7 +60,7 @@ int handle_tls_handshake(tls_session *ts) {
             ASSERT(ws_crt);
             ret = tls_resign(ss->sni_name, ws_crt, &crt, &pk);
             if ( 0 != ret ) {
-                tlsflat_notify(
+                tlsflat_on_msg(
                     ERROR,
                     "%4d [%s] RESIGN CERT FAILED [%X]",
                     ss->index,
@@ -105,7 +105,7 @@ int handle_tls_handshake(tls_session *ts) {
 
         /* TODO: Not TLS Data Stream, as a Tcp Data Stream to proxy */
 
-        tlsflat_notify(
+        tlsflat_on_msg(
             WARN,
             "%4d [%s] MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO %s SIDE",
             ss->index,
@@ -117,7 +117,7 @@ int handle_tls_handshake(tls_session *ts) {
         break;
 
     default:
-        tlsflat_notify(
+        tlsflat_on_msg(
             ERROR,
             "%4d [%s] HANDSHAKE mbedtls_ssl_handshake FAILED[%d] AT %s SIDE",
             ss->index,

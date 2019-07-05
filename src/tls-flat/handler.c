@@ -20,14 +20,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <zconf.h>
+#include <stdarg.h>
 #include "internal.h"
 
 /* 消息向上传递 */
-void tlsflat_notify(int level, const char *format, ...) {
+void tlsflat_on_msg(int level, const char *format, ...) {
     va_list ap;
     char msg[1024];
 
@@ -49,18 +47,18 @@ void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id
     stream_session *ss;
     const int init_size = 1024;
 
-    ss = malloc(sizeof(*ss));
+    ENSURE((ss = malloc(sizeof(*ss))) != NULL);
     memset(ss, 0, sizeof(*ss));
-    ss->index = index++;
-    ss->stream_id = stream_id;
-    ss->caller_ctx = caller_ctx;
-    ss->srv.ss = ss;
-    ss->clt.ss = ss;
-    ss->bytes_in = 0;
-    ss->bytes_out = 0;
+    ss->index       = index++;
+    ss->stream_id   = stream_id;
+    ss->caller_ctx  = caller_ctx;
+    ss->srv.ss      = ss;
+    ss->clt.ss      = ss;
+    ss->bytes_in    = 0;
+    ss->bytes_out   = 0;
 
-    ss->local = *addr->local;
-    ss->remote = *addr->remote;
+    ss->local       = *addr->local;
+    ss->remote      = *addr->remote;
 
     buf_range_alloc(&ss->srv.buf_in, init_size);
     buf_range_alloc(&ss->clt.buf_in, init_size);
@@ -70,11 +68,11 @@ void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id
     ss->srv.is_local = 1;
     ss->clt.is_local = 0;
 
-    ss->srv.tls_state = Tls_HandShaking;
-    ss->clt.tls_state = Tls_HandShaking;
+    ss->srv.tls_state = tls_handshaking;
+    ss->clt.tls_state = tls_handshaking;
 
-    ss->srv.wrstate = Write_Idel;
-    ss->clt.wrstate = Write_Idel;
+    ss->srv.wrstate = write_idel;
+    ss->clt.wrstate = write_idel;
 
     mbedtls_ssl_init(&ss->srv.ssl);
     mbedtls_ssl_init(&ss->clt.ssl);
@@ -122,6 +120,7 @@ int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     int action;
 
     ss = (stream_session*)ctx;
+    ASSERT(ss);
 
     if ( ss->closing ) {
         action = TERMINATE;
@@ -136,7 +135,7 @@ int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     else
         ss->bytes_in += buf->data_len;
 
-    tlsflat_notify(DEBUG, "%4d [%s] ==> %d BYTES %s SIDE",
+    tlsflat_on_msg(DEBUG, "%4d [%s] ==> %d BYTES %s SIDE",
                    ss->index,
                    ss->sni_name[0] ? ss->sni_name : ss->remote.host,
                    (int)buf->data_len,

@@ -84,8 +84,8 @@ static int tls_handshake_sni_cb(
 
 static int tls_clt_init(tls_clt *clt);
 static int tls_srv_init(tls_srv *srv);
-static void do_handshake(tls_session *ts);
-static void do_transmit(tls_session *ts);
+static void do_handshake_next(tls_session *ts);
+static void do_transmit_next(tls_session *ts);
 
 static TLS tls;
 
@@ -283,10 +283,14 @@ static void tls_debug_out(
     void *ctx, int level,
     const char *file, int line,
     const char *str) {
-    ((void)level);
 
-    mbedtls_fprintf((FILE *)ctx, "%s:%04d: %s", file, line, str);
-    fflush((FILE *)ctx);
+//    mbedtls_fprintf((FILE *)ctx, "%s:%04d: %s", file, line, str);
+//    fflush((FILE *)ctx);
+
+    (void)ctx;
+
+    // mbedtls调试输出与shadowsocks-ctypro等级差一级
+    tlsflat_on_msg(level + 1, "%s:%04d: %s", file, line, str);
 }
 
 /**
@@ -317,7 +321,7 @@ static int tls_handshake_sni_cb(
     BREAK_ON_FALSE(name_len < sizeof(ss->sni_name));
     memcpy(ss->sni_name, name, name_len);
 
-    tlsflat_notify(INFO, "%4d [%s] SNI", ss->index, ss->sni_name);
+    tlsflat_on_msg(INFO, "%4d [%s] SNI", ss->index, ss->sni_name);
 
     result = 0;
 
@@ -340,10 +344,10 @@ int tls_recv_done_do_next(tls_session *ts) {
     int ret = PASS;
 
     switch ( ts->tls_state ) {
-    case Tls_HandShaking:
+    case tls_handshaking:
         ret = handle_tls_handshake(ts);
         break;
-    case Tls_Transmitting:
+    case tls_transmitting:
         ret = handle_tls_transmit(ts);
         break;
     default:
@@ -356,11 +360,11 @@ int tls_recv_done_do_next(tls_session *ts) {
 
 void tls_send_done_do_next(tls_session *ts) {
     switch ( ts->tls_state ) {
-    case Tls_HandShaking:
-        do_handshake(ts);
+    case tls_handshaking:
+        do_handshake_next(ts);
         break;
-    case Tls_Transmitting:
-        do_transmit(ts);
+    case tls_transmitting:
+        do_transmit_next(ts);
         break;
     default:
         UNREACHABLE();
@@ -368,16 +372,16 @@ void tls_send_done_do_next(tls_session *ts) {
     }
 }
 
-static void do_handshake(tls_session *ts) {
+static void do_handshake_next(tls_session *ts) {
     handle_tls_handshake(ts);
 }
 
-static void do_transmit(tls_session *ts) {
+static void do_transmit_next(tls_session *ts) {
     tls_session *ts_p;
     int ret;
 
     ts_p = ts->is_local ? &ts->ss->clt : &ts->ss->srv;
-    ASSERT(Write_Waitack == ts->wrstate);
+    ASSERT(write_waitack == ts->wrstate);
 
     ret = mbedtls_ssl_write(
         &ts->ssl,
@@ -399,6 +403,7 @@ int tls_resign(
     const mbedtls_x509_crt *ws_crt,
     mbedtls_x509_crt **ret_crt,
     mbedtls_pk_context **ret_pk) {
+
     int ret;
     mbedtls_x509_crt *crt = NULL;
 

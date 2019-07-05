@@ -29,14 +29,14 @@
 #include "../comm/comm.h"
 
 enum {
-    Tls_HandShaking,
-    Tls_Transmitting
+    tls_handshaking,
+    tls_transmitting
 };
 
 enum {
-    Write_Idel,
-    Write_Sending,
-    Write_Waitack
+    write_idel,
+    write_sending,
+    write_waitack
 };
 
 typedef struct {
@@ -71,7 +71,7 @@ typedef struct stream_session_{
 } stream_session;
 
 /* HANDLER.C */
-void tlsflat_notify(int level, const char *format, ...);
+void tlsflat_on_msg(int level, const char *format, ...);
 void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size_t data_len);
 
 /* TLS.C */

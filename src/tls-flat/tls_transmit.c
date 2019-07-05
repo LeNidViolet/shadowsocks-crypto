@@ -32,11 +32,11 @@ int handle_tls_transmit(tls_session *ts) {
     int ret, action = REJECT;
     size_t extra_len, new_len;
 
-    ASSERT(Tls_Transmitting == ts->tls_state);
+    ASSERT(tls_transmitting == ts->tls_state);
     ss = ts->ss;
 
     ts_p = ts->is_local ? &ss->clt : &ss->srv;
-    ASSERT(Write_Idel == ts_p->wrstate);
+    ASSERT(write_idel == ts_p->wrstate);
     ts_p->buf_out.data_base = ts_p->buf_out.buf_base;
 
     ret = mbedtls_ssl_read(
@@ -45,7 +45,7 @@ int handle_tls_transmit(tls_session *ts) {
         ts_p->buf_out.buf_len);
 
     if( MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY == ret || 0 == ret ) {
-        tlsflat_notify(DEBUG, "%4d [%s] MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY (%d) ON %s SIDE",
+        tlsflat_on_msg(DEBUG, "%4d [%s] MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY (%d) ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ret,
@@ -56,7 +56,7 @@ int handle_tls_transmit(tls_session *ts) {
     }
 
     if ( MBEDTLS_ERR_NET_CONN_RESET == ret ) {
-        tlsflat_notify(WARN, "%4d [%s] MBEDTLS_ERR_NET_CONN_RESET ON %s SIDE",
+        tlsflat_on_msg(WARN, "%4d [%s] MBEDTLS_ERR_NET_CONN_RESET ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
@@ -66,7 +66,7 @@ int handle_tls_transmit(tls_session *ts) {
     }
 
     if ( MBEDTLS_ERR_SSL_CLIENT_RECONNECT == ret ) {
-        tlsflat_notify(WARN, "%4d [%s] MBEDTLS_ERR_SSL_CLIENT_RECONNECT ON %s SIDE",
+        tlsflat_on_msg(WARN, "%4d [%s] MBEDTLS_ERR_SSL_CLIENT_RECONNECT ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
@@ -77,7 +77,7 @@ int handle_tls_transmit(tls_session *ts) {
     }
 
     if ( MBEDTLS_ERR_SSL_WANT_READ == ret ) {
-        tlsflat_notify(DEBUG, "%4d [%s] mbedtls_ssl_read MBEDTLS_ERR_SSL_WANT_READ %s SIDE",
+        tlsflat_on_msg(DEBUG, "%4d [%s] mbedtls_ssl_read MBEDTLS_ERR_SSL_WANT_READ %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
@@ -91,7 +91,7 @@ int handle_tls_transmit(tls_session *ts) {
     ASSERT(MBEDTLS_ERR_SSL_WANT_WRITE != ret);
 
     if ( ret < 0 ) {
-        tlsflat_notify(ERROR, "%4d [%s] mbedtls_ssl_read FAILED[%d] ON %s SIDE",
+        tlsflat_on_msg(ERROR, "%4d [%s] mbedtls_ssl_read FAILED[%d] ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ret,
