@@ -24,6 +24,9 @@
 #include <stdarg.h>
 #include "internal.h"
 
+int on_tls_send(void *ctx, const unsigned char *buf, size_t len);
+int on_tls_recv(void *ctx, unsigned char *buf, size_t len);
+
 /* 消息向上传递 */
 void tlsflat_on_msg(int level, const char *format, ...) {
     va_list ap;

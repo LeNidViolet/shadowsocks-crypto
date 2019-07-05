@@ -25,6 +25,10 @@
 #define TLS_FLAT_INTERBAL_H
 
 #include <assert.h>
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/ssl_cache.h"
+#include "mbedtls/ssl_ticket.h"
 #include "mbedtls/ssl.h"
 #include "../comm/comm.h"
 
@@ -70,13 +74,44 @@ typedef struct stream_session_{
     unsigned int bytes_in;
 } stream_session;
 
+/*
+ * 供 SERVER 端使用的 TLS 环境
+ */
+typedef struct {
+    mbedtls_x509_crt root_crt;                      // 创建签名用的根证书
+    mbedtls_pk_context root_key;                    // 创建签名用的根证书私钥
+
+    mbedtls_pk_context mykey;                       // 所有自签子证书共用同一个KEY
+
+    mbedtls_ssl_config conf;                        // SSL设置
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ssl_cache_context cache;
+    mbedtls_ssl_ticket_context ticket_ctx;
+} tls_srv;
+
+/*
+ * 供 CLIENT 端使用的 TLS 环境
+ */
+typedef struct {
+    mbedtls_ssl_config conf;                        // SSL设置
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+} tls_clt;
+
+/*
+ * MBEDTLS 环境
+ */
+typedef struct {
+    tls_srv srv;
+    tls_clt clt;
+} TLS;
+
 /* HANDLER.C */
 void tlsflat_on_msg(int level, const char *format, ...);
 void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size_t data_len);
 
 /* TLS.C */
-int tls_init(void);
-void tls_clear(void);
 int tls_associate_context(mbedtls_ssl_context *ssl,  int as_server);
 int tls_recv_done_do_next(tls_session *ts);
 void tls_send_done_do_next(tls_session *ts);
@@ -85,11 +120,6 @@ int tls_resign(
     const mbedtls_x509_crt *ws_crt,
     mbedtls_x509_crt **ret_crt,
     mbedtls_pk_context **ret_pk);
-
-/* TLS_SEND.C */
-int on_tls_send(void *ctx, const unsigned char *buf, size_t len);
-/* TLS_RECV.C */
-int on_tls_recv(void *ctx, unsigned char *buf, size_t len);
 
 /* TLS_HANDSHAKE.C */
 int handle_tls_handshake(tls_session *ts);
@@ -117,4 +147,11 @@ void crt_pool_clear(void);
 /* EXTERNAL FUNCTION */
 void sscrypto_on_msg(int level, const char *msg);
 void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct, void *ss_ctx);
+
+
+extern const unsigned char root_crt[];
+extern const size_t root_crt_len;
+extern const unsigned char root_key[];
+extern const size_t root_key_len;
+extern TLS tls;
 #endif //TLS_FLAT_INTERBAL_H
