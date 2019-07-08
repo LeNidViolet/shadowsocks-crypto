@@ -679,7 +679,7 @@ static void do_next_server(connection *sender) {
     }
     pn->state = new_state;
 
-    if ( pn->state == s_dead )
+    if ( s_dead == pn->state )
         do_clear(pn);
 }
 
