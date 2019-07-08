@@ -33,6 +33,8 @@ static uv_tcp_t *tcp_handles[tcp_handle_max] = { NULL };
 static uv_signal_t tcp_signal_handle;
 static int tcp_signal_inited = 0;
 
+static int pn_outstanding = 0;
+
 static void on_connection(uv_stream_t *server, int status);
 
 
@@ -201,6 +203,8 @@ static void on_connection(uv_stream_t *server, int status) {
 
     ENSURE((pn = malloc(sizeof(*pn))) != NULL);
     memset(pn, 0, sizeof(*pn));
+
+    pn_outstanding++;
 
     pn->state = s_handshake;
     pn->outstanding = 0;
@@ -395,12 +399,6 @@ static void conn_timer_expire_server(uv_timer_t *handle) {
     case s_proxy_start:
         outgoing->result = UV_ETIMEDOUT;
         break;
-
-    case s_req_start:
-    case s_req_parse:
-    case s_proxy_ready:
-        UNREACHABLE();
-        break;
     default:
         conn->result = UV_ETIMEDOUT; /* s_proxy, .. */
         break;
@@ -592,6 +590,10 @@ static int do_clear(proxy_node *pn) {
         memset(pn, -1, sizeof(*pn));
     }
     free(pn);
+    pn_outstanding--;
+
+    if ( 0 == pn_outstanding )
+        printf("pn outstanding return to 0\n");
 
     return 0;
 }

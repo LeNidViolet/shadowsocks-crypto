@@ -72,7 +72,7 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
     snd_ctx = malloc(sizeof(*snd_ctx));
     CHECK(snd_ctx);
     memset(snd_ctx, 0, sizeof(*snd_ctx));
-    buf_range_alloc(&snd_ctx->buf, len);
+    buf_range_alloc(&snd_ctx->buf, len + 64);
     memcpy(snd_ctx->buf.buf_base, buf, len);
     snd_ctx->buf.data_len = len;
     snd_ctx->snd_len = len;

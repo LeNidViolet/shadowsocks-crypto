@@ -112,19 +112,19 @@ void tlsflat_on_msg(int level, const char *format, ...);
 void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size_t data_len);
 
 /* TLS.C */
-int tls_associate_context(mbedtls_ssl_context *ssl,  int as_server);
-int tls_recv_done_do_next(tls_session *ts);
+int  tls_associate_context(mbedtls_ssl_context *ssl,  int as_server);
+int  tls_recv_done_do_next(tls_session *ts);
 void tls_send_done_do_next(tls_session *ts);
-int tls_resign(
+int  tls_resign(
     const char *sni_name,
     const mbedtls_x509_crt *ws_crt,
     mbedtls_x509_crt **ret_crt,
     mbedtls_pk_context **ret_pk);
 
 /* TLS_HANDSHAKE.C */
-int handle_tls_handshake(tls_session *ts);
+int  handle_tls_handshake(tls_session *ts);
 /* TLS_TRANSMIT.C */
-int handle_tls_transmit(tls_session *ts);
+int  handle_tls_transmit(tls_session *ts);
 
 /* UTIL.C */
 void buf_range_alloc(buf_range *mr, size_t size);
@@ -132,12 +132,12 @@ void buf_range_relloc(buf_range *mr, size_t size);
 void buf_range_free(buf_range *mr);
 
 /* CRT_POOL.C */
-int crt_pool_init(void);
-int crt_pool_add(
+int  crt_pool_init(void);
+int  crt_pool_add(
     const char *domain,
     mbedtls_x509_crt *crt,
     mbedtls_pk_context *pk);
-int crt_pool_get(
+int  crt_pool_get(
     const char *domain,
     mbedtls_x509_crt **crt,
     mbedtls_pk_context **pk);
