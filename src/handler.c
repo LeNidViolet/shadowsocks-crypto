@@ -241,7 +241,12 @@ int sscrypto_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     }
 
     if ( env.callbacks.on_plain_stream ) {
-        env.callbacks.on_plain_stream(buf->data_base, buf->data_len, direct, session->index);
+        env.callbacks.on_plain_stream(
+            buf->data_base,
+            buf->data_len,
+            STREAM_UP == direct,
+            session->index
+            );
     }
 
 BREAK_LABEL:
@@ -257,7 +262,12 @@ void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct,
     CHECK(session);
 
     if ( env.callbacks.on_plain_stream ) {
-        env.callbacks.on_plain_stream(data, data_len, direct, session->index);
+        env.callbacks.on_plain_stream(
+            data,
+            data_len,
+            STREAM_UP == direct,
+            session->index
+            );
     }
 }
 
