@@ -45,7 +45,7 @@ int handle_tls_handshake(tls_session *ts) {
                 INFO,
                 "%4d [%s] SSL HANDSHAKE DONE",
                 ss->index,
-                ss->sni_name[0] ? ss->sni_name : ss->remote.host);
+                ss->sni_name[0] ? ss->sni_name : ss->remote.domain);
 
             /* Local(server) ssl handshake done. */
             /* 检查有没有要发往webserver的数据 */
@@ -109,7 +109,7 @@ int handle_tls_handshake(tls_session *ts) {
             WARN,
             "%4d [%s] MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO %s SIDE",
             ss->index,
-            ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+            ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
             ts->is_local ? "SERVER" : "CLIENT"
         );
         ss->closing = 1;
@@ -121,7 +121,7 @@ int handle_tls_handshake(tls_session *ts) {
             ERROR,
             "%4d [%s] HANDSHAKE mbedtls_ssl_handshake FAILED[%d] AT %s SIDE",
             ss->index,
-            ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+            ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
             ret,
             ts->is_local ? "SERVER" : "CLIENT"
         );

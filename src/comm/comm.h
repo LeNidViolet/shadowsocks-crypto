@@ -88,7 +88,8 @@ if ( !(value) )                                         \
 
 
 typedef struct {
-    char host[64];      /* HostName or IpAddress */
+    char ip[64];
+    char domain[64];      /* HostName or IpAddress */
     unsigned short port;
 } address;
 

@@ -25,21 +25,23 @@
 #include "internal.h"
 #include "s5.h"
 
-int sockaddr_to_str(const struct sockaddr *addr, address *addr_s) {
+int sockaddr_to_str(const struct sockaddr *addr, address *addr_s, int set_port) {
     const struct sockaddr_in6 *in6;
     const struct sockaddr_in *in;
 
     switch (addr->sa_family) {
     case AF_INET:
         in = (const struct sockaddr_in *)addr;
-        CHECK(0 == uv_ip4_name(in, addr_s->host, sizeof(addr_s->host)));
-        addr_s->port = htons_u(in->sin_port);
+        CHECK(0 == uv_ip4_name(in, addr_s->ip, sizeof(addr_s->ip)));
+        if ( set_port )
+            addr_s->port = htons_u(in->sin_port);
 
         break;
     case AF_INET6:
         in6 = (const struct sockaddr_in6 *)&addr;
-        CHECK(0 == uv_ip6_name(in6, addr_s->host, sizeof(addr_s->host)));
-        addr_s->port = htons_u(in6->sin6_port);
+        CHECK(0 == uv_ip6_name(in6, addr_s->ip, sizeof(addr_s->ip)));
+        if ( set_port )
+            addr_s->port = htons_u(in6->sin6_port);
 
         break;
     default:
@@ -157,7 +159,7 @@ int str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, address *addr_s) {
         UNREACHABLE();
     }
 
-    return sockaddr_to_str(&s.addr, addr_s);
+    return sockaddr_to_str(&s.addr, addr_s, 1);
 }
 
 
@@ -224,18 +226,18 @@ int s5_parse_addr(buf_range *buf, address *addr) {
         s.addr4.sin_family = AF_INET;
         memcpy(&s.addr4.sin_addr, parser.daddr, sizeof(s.addr4.sin_addr));
 
-        CHECK(0 == uv_ip4_name(&s.addr4, addr->host, sizeof(addr->host)));
+        CHECK(0 == uv_ip4_name(&s.addr4, addr->domain, sizeof(addr->domain)));
         break;
 
     case s5_atyp_ipv6:
         s.addr6.sin6_family = AF_INET6;
         memcpy(&s.addr6.sin6_addr, parser.daddr, sizeof(s.addr6.sin6_addr));
 
-        CHECK(0 == uv_ip6_name(&s.addr6, addr->host, sizeof(addr->host)));
+        CHECK(0 == uv_ip6_name(&s.addr6, addr->domain, sizeof(addr->domain)));
         break;
 
     case s5_atyp_host:
-        memcpy(addr->host, parser.daddr, strlen((char*)parser.daddr));
+        memcpy(addr->domain, parser.daddr, strlen((char*)parser.daddr));
         break;
     default:
         BREAK_NOW;

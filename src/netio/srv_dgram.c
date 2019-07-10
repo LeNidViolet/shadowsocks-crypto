@@ -233,7 +233,7 @@ static void dgram_read_done_local(
     }
     BREAK_ON_NULL(buf_r->data_len);
 
-    /* obtain address info */
+    /* obtain address info  srv_addr.domain/port被设置 */
     if ( 0 != s5_parse_addr(buf_r, &srv_addr) ) {
         ssnetio_on_msg(ERROR, "parse dgram packet address failed");
         BREAK_NOW;
@@ -242,11 +242,15 @@ static void dgram_read_done_local(
     /* Stop recv until all data sent out, or error occur */
     CHECK(0 == uv_udp_recv_stop(handle));
 
-    CHECK(0 == sockaddr_to_str(addr, &clt_addr));
+    // clt_addr.domain clt_addr.ip clt_addr.port
+    CHECK(0 == sockaddr_to_str(addr, &clt_addr, 1));
+    // ip->domain
+    strcpy(clt_addr.domain, clt_addr.ip);
+
     /* unique key */
     snprintf(key, sizeof(key), "%s:%d-%s:%d",
-             clt_addr.host, clt_addr.port,
-             srv_addr.host, srv_addr.port);
+             clt_addr.ip, clt_addr.port,
+             srv_addr.domain, srv_addr.port);
 
     ds = dgrams_find_by_key(key);
     if ( ds ) {
@@ -259,12 +263,13 @@ static void dgram_read_done_local(
         ds = dgrams_add(key, loop);
         CHECK(NULL != ds);
         ds->udp_in = handle;
-        sockaddr_cpy(addr, &ds->local.addr);
-        ds->peer = srv_addr;
-        ds->ss_buf.buf_base = ds->slab;
-        ds->ss_buf.buf_len = sizeof(ds->slab);
 
-        ssnetio_on_new_dgram(&clt_addr, &srv_addr, &ds->ctx);
+        sockaddr_cpy(addr, &ds->local.addr);
+
+        ds->remote_peer     = srv_addr;
+        ds->local_peer      = clt_addr;
+        ds->ss_buf.buf_base = ds->slab;
+        ds->ss_buf.buf_len  = sizeof(ds->slab);
 
         dgram_lookup(ds);
     }
@@ -281,27 +286,36 @@ static void dgram_lookup(dgrams *ds) {
     struct sockaddr *addr;
 
     /* Maybe it's a ip address in string form */
-    if ( 0 == uv_ip4_addr(ds->peer.host, ds->peer.port, &ds->remote.addr4) ||
-         0 == uv_ip6_addr(ds->peer.host, ds->peer.port, &ds->remote.addr6)) {
+    if ( 0 == uv_ip4_addr(ds->remote_peer.domain, ds->remote_peer.port, &ds->remote.addr4) ||
+         0 == uv_ip6_addr(ds->remote_peer.domain, ds->remote_peer.port, &ds->remote.addr6) ) {
 
-        /* 尝试替换成可读性更高的域名 */
+        // remote_peer.ip
+        strcpy(ds->remote_peer.ip, ds->remote_peer.domain);
+
+        /* 替换成可读性更高的域名 */
         host = dns_cache_find_host(&ds->remote.addr);
         if ( host ) {
-            memset(ds->peer.host, 0, sizeof(ds->peer.host));
-            strcpy(ds->peer.host, host);
+            memset(ds->remote_peer.domain, 0, sizeof(ds->remote_peer.domain));
+            strcpy(ds->remote_peer.domain, host);
         }
+
+        ssnetio_on_new_dgram(&ds->local_peer, &ds->remote_peer, &ds->ctx);
 
         dgram_read_remote(ds);
         dgram_send_remote(ds);
     } else {
         /* Lookup dns cache */
-        addr = dns_cache_find_ip(ds->peer.host, 1);
+        addr = dns_cache_find_ip(ds->remote_peer.domain, 1);
         if ( !addr )
-            addr = dns_cache_find_ip(ds->peer.host, 0);
+            addr = dns_cache_find_ip(ds->remote_peer.domain, 0);
 
         if ( addr ) {
             sockaddr_cpy(addr, &ds->remote.addr);
-            sockaddr_set_port(&ds->remote.addr, ds->peer.port);
+            sockaddr_set_port(&ds->remote.addr, ds->remote_peer.port);
+
+            // remote_peer.ip
+            sockaddr_to_str(addr, &ds->remote_peer, 0);
+            ssnetio_on_new_dgram(&ds->local_peer, &ds->remote_peer, &ds->ctx);
 
             dgram_read_remote(ds);
             dgram_send_remote(ds);
@@ -316,7 +330,7 @@ static void dgram_lookup(dgrams *ds) {
             if ( 0 != uv_getaddrinfo(loop,
                                      &ds->req_dns,
                                      dgram_getaddrinfo_done,
-                                     ds->peer.host,
+                                     ds->remote_peer.domain,
                                      NULL,
                                      &hints) ) {
                 CHECK(0 == dgram_read_local(ds->udp_in));
@@ -337,7 +351,7 @@ static void dgram_getaddrinfo_done(
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
-            dns_cache_add(ds->peer.host, ai->ai_addr);
+            dns_cache_add(ds->remote_peer.domain, ai->ai_addr);
 
             if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
                 ai_ipv4 = ai;
@@ -348,7 +362,10 @@ static void dgram_getaddrinfo_done(
         }
 
         sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &ds->remote.addr);
-        sockaddr_set_port(&ds->remote.addr, ds->peer.port);
+        sockaddr_set_port(&ds->remote.addr, ds->remote_peer.port);
+
+        sockaddr_to_str(&ds->remote.addr, &ds->remote_peer, 0);
+        ssnetio_on_new_dgram(&ds->local_peer, &ds->remote_peer, &ds->ctx);
 
         dgram_read_remote(ds);
         dgram_send_remote(ds);
@@ -357,7 +374,7 @@ static void dgram_getaddrinfo_done(
             ERROR,
             "dgram getaddrinfo failed: %s, domain: %s",
             uv_strerror(status),
-            ds->peer.host);
+            ds->remote_peer.domain);
 
         CHECK(0 == dgram_read_local(ds->udp_in));
         dgrams_remove(ds);

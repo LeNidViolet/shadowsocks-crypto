@@ -140,7 +140,7 @@ int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
 
     tlsflat_on_msg(DEBUG, "%4d [%s] ==> %d BYTES %s SIDE",
                    ss->index,
-                   ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+                   ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
                    (int)buf->data_len,
                    ts->is_local ? "SERVER" : "CLIENT");
 

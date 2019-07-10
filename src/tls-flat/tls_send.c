@@ -51,7 +51,7 @@ int on_tls_send(void *ctx, const unsigned char *buf, size_t len) {
             WARN,
             "%4d [%s] SENDING STH WHILE BUSYING AT %s SIDE",
             ss->index,
-            ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+            ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
             ts->is_local ? "SERVER" : "CLIENT"
         );
         ret = -1;
@@ -120,7 +120,7 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
     } else {
         tlsflat_on_msg(ERROR, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
                        ss->index,
-                       ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+                       ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
                        ts->is_local ? "SERVER" : "CLIENT",
                        status);
         ss->closing = 1;

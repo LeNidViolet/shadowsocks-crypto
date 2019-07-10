@@ -161,7 +161,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         sockaddr_cpy(ai->ai_addr, &s.addr);
         sockaddr_set_port(&s.addr, srv_ctx.config.bind_port);
 
-        CHECK(0 == sockaddr_to_str(&s.addr, &address));
+        CHECK(0 == sockaddr_to_str(&s.addr, &address, 1));
 
         /* tcp bind */
         ret = server_tcp_launch(loop, &s.addr);
@@ -170,7 +170,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
                 FATAL,
                 "tcp server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
-                address.host,
+                address.ip,
                 address.port);
             BREAK_NOW;
         }
@@ -182,7 +182,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
                 FATAL,
                 "dgram server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
-                address.host,
+                address.ip,
                 address.port);
             BREAK_NOW;
         }
@@ -195,12 +195,12 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
                 FATAL,
                 "dns server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
-                address.host,
+                address.ip,
                 dns_port);
             BREAK_NOW;
         }
 
-        ssnetio_on_bind(address.host, address.port);
+        ssnetio_on_bind(address.ip, address.port);
     }
 
 BREAK_LABEL:

@@ -48,7 +48,7 @@ int on_tls_recv(void *ctx, unsigned char *buf, size_t len) {
     ss = ts->ss;
     tlsflat_on_msg(DEBUG, "%4d [%s] <== %s SIDE WANT %d EATEN %d",
                    ss->index,
-                   ss->sni_name[0] ? ss->sni_name : ss->remote.host,
+                   ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
                    ts->is_local ? "SERVER" : "CLIENT",
                    (int)len,
                    eaten);

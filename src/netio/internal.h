@@ -104,7 +104,7 @@ typedef struct proxy_node_{
 
 
 /* URIL.C */
-int  sockaddr_to_str(const struct sockaddr *addr, address *addr_s);
+int  sockaddr_to_str(const struct sockaddr *addr, address *addr_s, int set_port);
 void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst);
 int  sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
 void sockaddr_set_port(struct sockaddr *addr, unsigned short port);

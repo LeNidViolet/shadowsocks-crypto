@@ -38,9 +38,11 @@ typedef struct {
     void (*on_msg)(int level, const char *msg);
     void (*on_bind)(const char *host, unsigned short port);
     void (*on_stream_connection_made)(
-        const char *addr_local,
+        const char *domain_local,
+        const char *ip_local,
         unsigned short port_local,
-        const char *addr_remote,
+        const char *domain_remote,
+        const char *ip_remote,
         unsigned short port_remote,
         int stream_index);
     void (*on_stream_teardown)(int stream_index);
@@ -49,9 +51,11 @@ typedef struct {
      * set data to a context associate with it
      * */
     void (*on_dgram_connection_made)(
-        const char *addr_local,
+        const char *domain_local,
+        const char *ip_local,
         unsigned short port_local,
-        const char *addr_remote,
+        const char *domain_remote,
+        const char *ip_remote,
         unsigned short port_remote,
         int dgram_index);
     void (*on_dgram_teardown)(int dgram_index);

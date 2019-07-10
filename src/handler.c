@@ -145,9 +145,11 @@ void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx) {
 
     if ( env.callbacks.on_stream_connection_made ) {
         env.callbacks.on_stream_connection_made(
-            addr->local->host,
+            addr->local->domain,
+            addr->local->ip,
             addr->local->port,
-            addr->remote->host,
+            addr->remote->domain,
+            addr->remote->ip,
             addr->remote->port,
             session->index
             );
@@ -195,9 +197,11 @@ void sscrypto_on_new_dgram(const address_pair *addr, void **ctx) {
     *ctx = session;
     if ( env.callbacks.on_dgram_connection_made ) {
         env.callbacks.on_dgram_connection_made(
-            addr->local->host,
+            addr->local->domain,
+            addr->local->ip,
             addr->local->port,
-            addr->remote->host,
+            addr->remote->domain,
+            addr->remote->ip,
             addr->remote->port,
             session->index
             );

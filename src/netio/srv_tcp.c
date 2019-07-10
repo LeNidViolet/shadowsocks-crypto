@@ -102,7 +102,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
 
     if ( tcp_handle_index >= tcp_handle_max ) BREAK_NOW;
 
-    CHECK(0 == sockaddr_to_str(addr, &address));
+    CHECK(0 == sockaddr_to_str(addr, &address, 1));
 
     ENSURE((tcp_handle = malloc(sizeof(*tcp_handle))) != NULL);
     CHECK(0 == uv_tcp_init(loop, tcp_handle));
@@ -112,7 +112,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
         ssnetio_on_msg(
             FATAL,
             "tcp bind to %s:%d failed: %s",
-            address.host,
+            address.ip,
             address.port,
             uv_strerror(ret));
         BREAK_NOW;
@@ -123,7 +123,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
         ssnetio_on_msg(
             FATAL,
             "tcp listen to %s:%d failed: %s",
-            address.host,
+            address.ip,
             address.port,
             uv_strerror(ret));
         BREAK_NOW;
@@ -190,6 +190,7 @@ static int  do_dnsovertcp_lookup(proxy_node *pn);
 static void do_dnsovertcp_packback(proxy_node *pn, struct sockaddr *addr);
 static int  do_req_connect(proxy_node *pn);
 
+/* 入口点 代理链接到来 */
 static void on_connection(uv_stream_t *server, int status) {
     static unsigned int index = 0;
     uv_loop_t *loop;
@@ -242,7 +243,11 @@ static void on_connection(uv_stream_t *server, int status) {
     outgoing->ss_buf.buf_len = sizeof(outgoing->slab);
     outgoing->ss_buf.data_len = 0;
 
+    // 设置 incoming.peer.ip
     CHECK(0 == str_tcp_endpoint(&incoming->handle.tcp, peer, &incoming->peer));
+
+    // incoming.peer.ip 是 ip 字符串, 拷贝到domain中
+    strcpy(incoming->peer.domain, incoming->peer.ip);
 
     /* Emit a notify */
     ssnetio_on_new_stream(incoming);
@@ -619,7 +624,7 @@ static void conn_getaddrinfo_done(
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
-            dns_cache_add(outgoing->peer.host, ai->ai_addr);
+            dns_cache_add(outgoing->peer.domain, ai->ai_addr);
 
             if ( AF_INET == ai->ai_family && !ai_ipv4 ) {
                 ai_ipv4 = ai;
@@ -631,6 +636,9 @@ static void conn_getaddrinfo_done(
 
         sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &outgoing->t.addr);
         sockaddr_set_port(&outgoing->t.addr, outgoing->peer.port);
+
+        /* 设置UPSTREAM远端 IP信息 */
+        sockaddr_to_str(&outgoing->t.addr, &outgoing->peer, 0);
     }
 
     uv_freeaddrinfo(addrs);
@@ -685,6 +693,7 @@ static void do_next_server(connection *sender) {
 
 static int do_dnsovertcp(proxy_node *pn) {
     connection *incoming;
+    connection *outgoing;
     int new_state;
     struct addrinfo hints;
     PDNS_PARSE parse = NULL;
@@ -696,6 +705,7 @@ static int do_dnsovertcp(proxy_node *pn) {
     struct sockaddr *addrp;
 
     incoming = &pn->incoming;
+    outgoing = &pn->outgoing;
     assert(0 != incoming->ss_buf.data_len);
 
     // DNS OVER TCP 前两字节指示包长
@@ -704,10 +714,9 @@ static int do_dnsovertcp(proxy_node *pn) {
         (unsigned int)incoming->ss_buf.data_len - 2);
     if ( parse ) {
 
-        strcpy(pn->outgoing.peer.host, parse->queryDomain);
-
-        if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, 53, &addru.addr4) ||
-             0 == uv_ip6_addr(pn->outgoing.peer.host, 53, &addru.addr6)) {
+        // IP 格式 字符串?
+        if ( 0 == uv_ip4_addr(parse->queryDomain, 53, &addru.addr4) ||
+             0 == uv_ip6_addr(parse->queryDomain, 53, &addru.addr6)) {
             // TODO: IPV4 ONLY FOR NOW
             ASSERT(parse->queryType == DNS_QUERY_TYPE_IPV4);
 
@@ -718,20 +727,24 @@ static int do_dnsovertcp(proxy_node *pn) {
 
         addrp = dns_cache_find_ip(parse->queryDomain, 1);
         if ( addrp ) {
+            // 存在于DNS缓存之中
             // TODO: IPV4 ONLY FOR NOW
             ASSERT(parse->queryType == DNS_QUERY_TYPE_IPV4);
 
             do_dnsovertcp_packback(pn, addrp);
             new_state = s_kill;
         } else {
+            // 准备查询DNS
             memset(&hints, 0, sizeof(hints));
             hints.ai_family = AF_UNSPEC;
             hints.ai_socktype = SOCK_STREAM;
             hints.ai_protocol = IPPROTO_TCP;
 
+            // 保存域名信息
+            strcpy(pn->outgoing.peer.domain, parse->queryDomain);
 
             if ( 0 != uv_getaddrinfo(pn->loop,
-                                     &pn->outgoing.t.addrinfo_req,
+                                     &outgoing->t.addrinfo_req,
                                      conn_getaddrinfo_done,
                                      parse->queryDomain,
                                      NULL,
@@ -741,7 +754,7 @@ static int do_dnsovertcp(proxy_node *pn) {
             }
 
             pn->outstanding++;
-            conn_timer_reset(&pn->outgoing);
+            conn_timer_reset(outgoing);
 
             new_state = s_dnsovertcp_lookup;
         }
@@ -759,12 +772,14 @@ BREAK_LABEL:
 
 static int do_handshake(proxy_node *pn) {
     connection *incoming;
+    connection *outgoing;
     int ret, new_state;
     struct addrinfo hints;
     const char *host;
     struct sockaddr* addr;
 
     incoming = &pn->incoming;
+    outgoing = &pn->outgoing;
 
     if ( incoming->result < 0 ) {
         ssnetio_on_msg(ERROR, "%4d handshake read error: %s",
@@ -783,8 +798,8 @@ static int do_handshake(proxy_node *pn) {
         BREAK_NOW;
     }
 
-    /* Parser to get dest address */
-    ret = s5_parse_addr(&incoming->ss_buf, &pn->outgoing.peer);
+    /* Parser to get dest address  解析之后填充 outgoing.peer.domain */
+    ret = s5_parse_addr(&incoming->ss_buf, &outgoing->peer);
     if ( 0 != ret ) {
         ssnetio_on_msg(ERROR, "%4d handshake parse addr error", pn->index);
         new_state = do_kill(pn);
@@ -792,44 +807,51 @@ static int do_handshake(proxy_node *pn) {
     }
 
     // 接管DNS查询
-    if ( 53 == pn->outgoing.peer.port ) {
+    if ( 53 == outgoing->peer.port ) {
         new_state = do_dnsovertcp(pn);
         BREAK_NOW;
     }
 
     /* Maybe it's a ip address in string form */
-    if ( 0 == uv_ip4_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr4) ||
-         0 == uv_ip6_addr(pn->outgoing.peer.host, pn->outgoing.peer.port, &pn->outgoing.t.addr6)) {
+    if ( 0 == uv_ip4_addr(outgoing->peer.domain, outgoing->peer.port, &outgoing->t.addr4) ||
+         0 == uv_ip6_addr(outgoing->peer.domain, outgoing->peer.port, &outgoing->t.addr6)) {
 
-        host = dns_cache_find_host(&pn->outgoing.t.addr);
+        // 拷贝到 outgoing.peer.ip
+        strcpy(outgoing->peer.ip, outgoing->peer.domain);
+
+        host = dns_cache_find_host(&outgoing->t.addr);
         if ( host ) {
-            memset(pn->outgoing.peer.host, 0, sizeof(pn->outgoing.peer.host));
-            strcpy(pn->outgoing.peer.host, host);
+            memset(outgoing->peer.domain, 0, sizeof(outgoing->peer.domain));
+            strcpy(outgoing->peer.domain, host);
         }
 
         new_state = do_req_lookup(pn);
         BREAK_NOW;
     }
 
-    addr = dns_cache_find_ip(pn->outgoing.peer.host, 1);
+    addr = dns_cache_find_ip(outgoing->peer.domain, 1);
     if ( !addr ) {
-        addr = dns_cache_find_ip(pn->outgoing.peer.host, 0);
+        addr = dns_cache_find_ip(outgoing->peer.domain, 0);
     }
     if ( addr ) {
-        sockaddr_cpy(addr, &pn->outgoing.t.addr);
-        sockaddr_set_port(&pn->outgoing.t.addr, pn->outgoing.peer.port);
+        // 拷贝到 outgoing.peer.ip
+        sockaddr_to_str(addr, &outgoing->peer, 0);
+
+        sockaddr_cpy(addr, &outgoing->t.addr);
+        sockaddr_set_port(&outgoing->t.addr, outgoing->peer.port);
         new_state = do_req_lookup(pn);
 
     } else {
+        // 进行DNS查询
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_protocol = IPPROTO_TCP;
 
         if ( 0 != uv_getaddrinfo(pn->loop,
-                                 &pn->outgoing.t.addrinfo_req,
+                                 &outgoing->t.addrinfo_req,
                                  conn_getaddrinfo_done,
-                                 pn->outgoing.peer.host,
+                                 outgoing->peer.domain,
                                  NULL,
                                  &hints) ) {
             new_state = do_kill(pn);
@@ -837,7 +859,7 @@ static int do_handshake(proxy_node *pn) {
         }
 
         pn->outstanding++;
-        conn_timer_reset(&pn->outgoing);
+        conn_timer_reset(outgoing);
 
         new_state = s_req_lookup;
     }
@@ -858,7 +880,7 @@ static int do_req_lookup(proxy_node *pn) {
     if ( outgoing->result < 0 ) {
         ssnetio_on_msg(ERROR, "%4d lookup error for %s : %s",
                        pn->index,
-                       outgoing->peer.host,
+                       outgoing->peer.domain,
                        uv_strerror((int)outgoing->result));
 
         ret = do_kill(pn);
@@ -942,7 +964,7 @@ static int do_dnsovertcp_lookup(proxy_node *pn) {
     if ( outgoing->result < 0 ) {
         ssnetio_on_msg(ERROR, "%4d lookup error for %s : %s",
                        pn->index,
-                       outgoing->peer.host,
+                       outgoing->peer.domain,
                        uv_strerror((int)outgoing->result));
 
         ret = do_kill(pn);
@@ -980,7 +1002,7 @@ static int do_req_connect(proxy_node *pn) {
             ERROR,
             "%4d connect to %s:%d failed: %s",
             pn->index,
-            outgoing->peer.host,
+            outgoing->peer.domain,
             outgoing->peer.port,
             uv_strerror((int)outgoing->result));
         ret = do_kill(pn);
@@ -995,9 +1017,9 @@ static int do_req_connect(proxy_node *pn) {
     ssnetio_on_connection_made(pn);
 
     snprintf(pn->link_info, sizeof(pn->link_info), "%s:%d -> %s:%d",
-             incoming->peer.host,
+             incoming->peer.domain,
              incoming->peer.port,
-             outgoing->peer.host,
+             outgoing->peer.domain,
              outgoing->peer.port);
 
     if ( 0 == incoming->ss_buf.data_len ) {
