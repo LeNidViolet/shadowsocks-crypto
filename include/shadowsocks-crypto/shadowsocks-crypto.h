@@ -24,6 +24,7 @@
 #define SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef struct {
     const char *bind_host;
@@ -61,8 +62,8 @@ typedef struct {
     void (*on_dgram_teardown)(int dgram_index);
 
 
-    void (*on_plain_stream)(const char *data, size_t data_len, int send_out, int stream_index);
-    void (*on_plain_dgram)(const char *data, size_t data_len, int send_out, int dgram_index);
+    void (*on_plain_stream)(const char *data, size_t data_len, bool send_out, int stream_index);
+    void (*on_plain_dgram)(const char *data, size_t data_len, bool send_out, int dgram_index);
 } sscrypto_callback;
 
 typedef struct {
