@@ -35,8 +35,10 @@ void on_msg(int level, const char *msg) {
 }
 
 void on_stream_connection_made(
+    const char *domain_local,
     const char *addr_local,
     unsigned short port_local,
+    const char *domain_remote,
     const char *addr_remote,
     unsigned short port_remote,
     int stream_index) {
@@ -50,18 +52,20 @@ void on_stream_teardown(int stream_index) {
     (void)stream_index;
 }
 
-void on_plain_stream(const char *data, size_t data_len, int direct, int stream_index) {
+void on_plain_stream(const char *data, size_t data_len, bool send_out, int stream_index) {
 
     (void)data;
     (void)data_len;
-    (void)direct;
+    (void)send_out;
     (void)stream_index;
 }
 
 
 void on_dgram_connection_made(
+    const char *domain_local,
     const char *addr_local,
     unsigned short port_local,
+    const char *domain_remote,
     const char *addr_remote,
     unsigned short port_remote,
     int dgram_index)  {
@@ -76,10 +80,10 @@ void on_dgram_teardown(int dgram_index) {
 }
 
 
-void on_plain_dgram(const char *data, size_t data_len, int direct, int dgram_index) {
+void on_plain_dgram(const char *data, size_t data_len, bool send_out, int dgram_index) {
     (void)data;
     (void)data_len;
-    (void)direct;
+    (void)send_out;
     (void)dgram_index;
 }
 

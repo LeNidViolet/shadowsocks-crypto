@@ -101,10 +101,5 @@ SET(SHADOWSOCKSCRYPTO_SRC
         ${TLSFLAT_SRC}
         )
 
-
-ADD_LIBRARY(shadowsocks-crypto_a SHARED ${SHADOWSOCKSCRYPTO_SRC})
 ADD_LIBRARY(shadowsocks-crypto STATIC ${SHADOWSOCKSCRYPTO_SRC})
-
-TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls uv_a)
-TARGET_LINK_LIBRARIES(shadowsocks-crypto_a mbedtls uv_a)
-
+TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls uv)
