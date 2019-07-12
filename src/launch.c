@@ -69,8 +69,6 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
     /* 释放 TLS 资源 */
     tlsflat_clear();
 
-    sscrypto_on_msg(INFO, "program exiting");
-
 BREAK_LABEL:
 
     return ret;
