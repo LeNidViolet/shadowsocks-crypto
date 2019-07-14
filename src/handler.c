@@ -278,7 +278,11 @@ void sscrypto_on_plain_dgram(const buf_range *buf, int direct, void *ctx) {
     CHECK(session);
 
     if ( env.callbacks.on_plain_dgram ) {
-        env.callbacks.on_plain_dgram(buf->data_base, buf->data_len, direct, session->index);
+        env.callbacks.on_plain_dgram(
+            buf->data_base,
+            buf->data_len,
+            STREAM_UP == direct,
+            session->index);
     }
 }
 
