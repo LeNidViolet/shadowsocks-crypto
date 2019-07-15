@@ -128,11 +128,11 @@ enum {
 };
 
 enum {
-    FATAL = 1,
-    ERROR = 2,
-    WARN = 3,
-    INFO = 4,
-    DEBUG = 5,
+    ERROR   = 1,
+    WARN    = 2,
+    KEY     = 3,
+    INFO    = 4,
+    DEBUG   = 5,
 };
 
 #endif //SHADOWSOCKS_CRYPTO_COMM_H

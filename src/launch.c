@@ -50,7 +50,7 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
     /* 初始化 TLS 部分 */
     ret = tlsflat_init(&io_port);
     if ( 0 != ret ) {
-        sscrypto_on_msg(FATAL, "tlsflat init failed");
+        sscrypto_on_msg(ERROR, "tlsflat init failed");
         BREAK_NOW;
     }
 

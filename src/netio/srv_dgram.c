@@ -228,14 +228,14 @@ static void dgram_read_done_local(
 
     /* decrypt udp data */
     if ( 0 != ssnetio_on_dgram_decrypt(buf_r, 0) ) {
-        ssnetio_on_msg(ERROR, "decrypt dgram packet failed");
+        ssnetio_on_msg(WARN, "decrypt dgram packet failed");
         BREAK_NOW;
     }
     BREAK_ON_NULL(buf_r->data_len);
 
     /* obtain address info  srv_addr.domain/port被设置 */
     if ( 0 != s5_parse_addr(buf_r, &srv_addr) ) {
-        ssnetio_on_msg(ERROR, "parse dgram packet address failed");
+        ssnetio_on_msg(WARN, "parse dgram packet address failed");
         BREAK_NOW;
     }
 
@@ -371,7 +371,7 @@ static void dgram_getaddrinfo_done(
         dgram_send_remote(ds);
     } else {
         ssnetio_on_msg(
-            ERROR,
+            WARN,
             "dgram getaddrinfo failed: %s, domain: %s",
             uv_strerror(status),
             ds->remote_peer.domain);
@@ -508,7 +508,7 @@ static void dgram_read_done_remote(
 
 
     if ( 0 != ssnetio_on_dgram_encrypt(buf_r, 0) ) {
-        ssnetio_on_msg(ERROR, "encrypt dgram packet failed");
+        ssnetio_on_msg(WARN, "encrypt dgram packet failed");
         BREAK_NOW;
     }
 

@@ -100,6 +100,11 @@ static int tls_srv_init(tls_srv *srv) {
 
     mbedtls_ssl_conf_dbg(&srv->conf, tls_debug_out, stdout);
 
+//     - 0 No debug
+//     - 1 Error
+//     - 2 State change
+//     - 3 Informational
+//     - 4 Verbose
     mbedtls_debug_set_threshold(0);
 
     ret = mbedtls_ctr_drbg_seed(
@@ -269,8 +274,28 @@ static void tls_debug_out(
 //    mbedtls_fprintf((FILE *)ctx, "%s:%04d: %s", file, line, str);
 //    fflush((FILE *)ctx);
 
-    (void)ctx;
+    int lv = -1;
 
-    // mbedtls调试输出与shadowsocks-ctypro等级差一级
-    tlsflat_on_msg(level + 1, "%s:%04d: %s", file, line, str);
+    switch ( level ) {
+    case 0:
+        break;
+    case 1:
+        lv = ERROR;
+        break;
+    case 2:
+        lv = KEY;
+        break;
+    case 3:
+        lv = INFO;
+        break;
+    case 4:
+        lv = DEBUG;
+        break;
+    default:
+        break;
+    }
+
+    (void)ctx;
+    if ( -1 != lv)
+        tlsflat_on_msg(lv, "%s:%04d: %s", file, line, str);
 }

@@ -118,7 +118,7 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
         /* 继续触发流程下一步 */
         tls_send_done_do_next(ts);
     } else {
-        tlsflat_on_msg(ERROR, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
+        tlsflat_on_msg(WARN, "%4d [%s] TLS %s SIDE SEND DATA OUT FAILED[%d]",
                        ss->index,
                        ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
                        ts->is_local ? "SERVER" : "CLIENT",

@@ -42,7 +42,7 @@ int handle_tls_handshake(tls_session *ts) {
 
         if ( ts->is_local ) {
             tlsflat_on_msg(
-                INFO,
+                KEY,
                 "%4d [%s] SSL HANDSHAKE DONE",
                 ss->index,
                 ss->sni_name[0] ? ss->sni_name : ss->remote.domain);
@@ -118,7 +118,7 @@ int handle_tls_handshake(tls_session *ts) {
 
     default:
         tlsflat_on_msg(
-            ERROR,
+            WARN,
             "%4d [%s] HANDSHAKE mbedtls_ssl_handshake FAILED[%d] AT %s SIDE",
             ss->index,
             ss->sni_name[0] ? ss->sni_name : ss->remote.domain,

@@ -276,7 +276,7 @@ static void dnssrv_read_done(
                                  parse->queryDomain,
                                  NULL,
                                  &hints) ) {
-            ssnetio_on_msg(ERROR, "dns uv_getaddrinfo failed [%s]", block->domain);
+            ssnetio_on_msg(WARN, "dns uv_getaddrinfo failed [%s]", block->domain);
             BREAK_NOW;
         }
     }

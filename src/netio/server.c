@@ -108,7 +108,7 @@ static int server_run(sscrypto_ctx *ctx) {
                          NULL,
                          &hints);
     if ( 0 != ret ) {
-        ssnetio_on_msg(ERROR, "uv_getaddrinfo failed: %s", uv_strerror(ret));
+        ssnetio_on_msg(WARN, "uv_getaddrinfo failed: %s", uv_strerror(ret));
         BREAK_NOW;
     }
 
@@ -139,7 +139,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     loop = uv_req_get_data((uv_req_t *)req);
 
     if ( status < 0 ) {
-        ssnetio_on_msg(ERROR, "uv_getaddrinfo failed: %s", uv_strerror(status));
+        ssnetio_on_msg(WARN, "uv_getaddrinfo failed: %s", uv_strerror(status));
         BREAK_NOW;
     }
 
@@ -167,7 +167,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_tcp_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                FATAL,
+                ERROR,
                 "tcp server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.ip,
@@ -179,7 +179,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_dgram_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                FATAL,
+                ERROR,
                 "dgram server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.ip,
@@ -192,7 +192,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_dns_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                FATAL,
+                ERROR,
                 "dns server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.ip,

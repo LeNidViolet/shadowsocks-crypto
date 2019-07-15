@@ -91,7 +91,7 @@ int handle_tls_transmit(tls_session *ts) {
     ASSERT(MBEDTLS_ERR_SSL_WANT_WRITE != ret);
 
     if ( ret < 0 ) {
-        tlsflat_on_msg(ERROR, "%4d [%s] mbedtls_ssl_read FAILED[%d] ON %s SIDE",
+        tlsflat_on_msg(WARN, "%4d [%s] mbedtls_ssl_read FAILED[%d] ON %s SIDE",
                        ss->index,
                        ss->sni_name,
                        ret,
