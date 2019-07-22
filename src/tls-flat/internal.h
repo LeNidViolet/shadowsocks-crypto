@@ -149,9 +149,5 @@ void sscrypto_on_msg(int level, const char *msg);
 void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct, void *ss_ctx);
 
 
-extern const unsigned char root_crt[];
-extern const size_t root_crt_len;
-extern const unsigned char root_key[];
-extern const size_t root_key_len;
 extern TLS tls;
 #endif //TLS_FLAT_INTERBAL_H

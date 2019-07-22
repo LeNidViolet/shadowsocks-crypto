@@ -66,7 +66,7 @@ void sscrypto_on_msg(int level, const char *format, ...);
 int ssnetio_server_launch(const sscrypto_ctx *ctx);
 void ssnetio_server_stop(void);
 void ssnetio_server_port(ioctl_port *port);
-int tlsflat_init(const ioctl_port *port);
+int tlsflat_init(const ioctl_port *port, const char *root_crt, const char *root_key);
 void tlsflat_clear(void);
 void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id, void *caller_ctx, void **tls_ctx);
 void tlsflat_on_stream_teardown(void *tls_ctx);

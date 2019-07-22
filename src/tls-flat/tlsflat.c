@@ -26,7 +26,7 @@
 #include "internal.h"
 
 
-static int tls_init(void);
+static int tls_init(const char *root_crt, const char *root_key);
 static void tls_clear(void);
 static void tls_debug_out(
     void *ctx, int level,
@@ -40,7 +40,7 @@ int tls_handshake_sni_cb(
     size_t name_len);
 
 static int tls_clt_init(tls_clt *clt);
-static int tls_srv_init(tls_srv *srv);
+static int tls_srv_init(tls_srv *srv, const char *root_crt, const char *root_key);
 static void do_handshake_next(tls_session *ts);
 static void do_transmit_next(tls_session *ts);
 
@@ -49,13 +49,13 @@ TLS tls;
 ioctl_port ioctlp = {0};
 
 
-int tlsflat_init(const ioctl_port *port) {
+int tlsflat_init(const ioctl_port *port, const char *root_crt, const char *root_key) {
     int ret = -1;
 
     BREAK_ON_NULL(port);
     ioctlp = *port;
 
-    ret = tls_init();
+    ret = tls_init(root_crt, root_key);
     BREAK_ON_FAILURE(ret);
     ret = crt_pool_init();
     BREAK_ON_FAILURE(ret);
@@ -71,11 +71,11 @@ void tlsflat_clear(void) {
 
 
 
-static int tls_init(void) {
+static int tls_init(const char *root_crt, const char *root_key) {
     int ret;
 
     memset(&tls, 0, sizeof(tls));
-    ret = tls_srv_init(&tls.srv);
+    ret = tls_srv_init(&tls.srv, root_crt, root_key);
     if ( 0 == ret )
         ret = tls_clt_init(&tls.clt);
 
@@ -86,7 +86,7 @@ static int tls_init(void) {
 /*
  * 初始化 tls server 端
  */
-static int tls_srv_init(tls_srv *srv) {
+static int tls_srv_init(tls_srv *srv, const char *root_crt, const char *root_key) {
     int ret;
 
     mbedtls_x509_crt_init(&srv->root_crt);
@@ -116,18 +116,10 @@ static int tls_srv_init(tls_srv *srv) {
     );
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_x509_crt_parse(
-        &srv->root_crt,
-        root_crt,
-        root_crt_len);
+    ret = mbedtls_x509_crt_parse_file(&srv->root_crt, root_crt);
     BREAK_ON_FAILURE(ret);
 
-    ret = mbedtls_pk_parse_key(
-        &srv->root_key,
-        root_key,
-        root_key_len,
-        NULL,
-        0);
+    ret = mbedtls_pk_parse_keyfile(&srv->root_key, root_key, NULL);
     BREAK_ON_FAILURE(ret);
 
     ret = mbedtls_ssl_config_defaults(
