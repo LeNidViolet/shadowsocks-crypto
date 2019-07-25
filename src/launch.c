@@ -24,10 +24,13 @@
 #include "internal.h"
 
 crypto_env env = { 0 };
+static int ss_running = 0;
 
 int sscrypto_launch(const sscrypto_ctx *ctx) {
     int ret = -1;
     ioctl_port io_port;
+
+    BREAK_ON_FALSE(0 == ss_running);
 
     BREAK_ON_NULL(ctx);
     BREAK_ON_NULL(ctx->config.method);
@@ -63,10 +66,12 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
     /* 初始化加密解密单元 */
     init_crypt_unit();
 
+    ss_running = 1;
 
     /* 启动SS NETIO, 开始监听 */
     ret = ssnetio_server_launch(ctx);
 
+    ss_running = 0;
 
     /* 释放加密解密单元资源 */
     free_crypt_unit();
@@ -80,5 +85,8 @@ BREAK_LABEL:
 }
 
 void sscrypto_stop() {
-    ssnetio_server_stop();
+    if ( ss_running ) {
+        ssnetio_server_stop();
+        ss_running = 0;
+    }
 }
