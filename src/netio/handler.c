@@ -41,8 +41,9 @@ int  sscrypto_on_dgram_decrypt(buf_range *buf);
 // ==========
 
 typedef struct {
-    write_stream_out_callback callback;
-    void *param;
+    buf_range   buf;
+    uv_write_t  req;
+    connection  *conn;
 } snd_ctx;
 
 static void ssnetio_write_stream_out_done(uv_write_t *req, int status);
@@ -174,8 +175,7 @@ void ssnetio_on_plain_dgram(buf_range *buf, int direct, void *ctx) {
 
 /* SERVER SIDE ONLY */
 int ssnetio_write_stream_out(
-    buf_range *buf, int direct, void *stream_id,
-    write_stream_out_callback callback, void *param) {
+    const char *buf,  size_t len, int direct, void *stream_id) {
     int ret = -1;
     proxy_node *pn;
     connection *conn;
@@ -189,22 +189,31 @@ int ssnetio_write_stream_out(
     pn = (proxy_node*)stream_id;
     conn = STREAM_UP == direct ? &pn->outgoing : &pn->incoming;
 
+
+    snd_ctx = malloc(sizeof(*snd_ctx));
+    ASSERT(snd_ctx);
+    memset(snd_ctx, 0, sizeof(*snd_ctx));
+
+    snd_ctx->buf.buf_base = malloc(len + 64);
+    ASSERT(snd_ctx->buf.buf_base);
+    snd_ctx->buf.data_base = snd_ctx->buf.buf_base;
+    snd_ctx->buf.buf_len = len + 64;
+    snd_ctx->buf.data_len = len;
+    memmove(snd_ctx->buf.data_base, buf, len);
+
+
     if ( STREAM_DOWN == direct ) {
-        ret = sscrypto_on_stream_encrypt(buf, conn->pn->ctx);
+        ret = sscrypto_on_stream_encrypt(&snd_ctx->buf, conn->pn->ctx);
         ASSERT(0 == ret);
         ret = -2;
     }
 
-    ASSERT(c_stop == conn->wrstate || c_done == conn->wrstate);
-    conn->wrstate = c_busy;
+    buf_t = uv_buf_init(snd_ctx->buf.data_base, snd_ctx->buf.data_len);
 
-    buf_t = uv_buf_init(buf->data_base, (unsigned int)buf->data_len);
+    uv_req_set_data((uv_req_t*)&snd_ctx->req, snd_ctx);
+    snd_ctx->conn = conn;
 
-    ENSURE((snd_ctx = malloc(sizeof(*snd_ctx))) != NULL);
-    snd_ctx->callback = callback;
-    snd_ctx->param = param;
-    uv_req_set_data((uv_req_t*)&conn->write_req, snd_ctx);
-    if ( 0 != uv_write(&conn->write_req,
+    if ( 0 != uv_write(&snd_ctx->req,
                        &conn->handle.stream,
                        &buf_t,
                        1,
@@ -226,19 +235,14 @@ BREAK_LABEL:
 static void ssnetio_write_stream_out_done(uv_write_t *req, int status) {
     connection *conn;
     snd_ctx *snd_ctx;
-    int direct;
-
-    conn = CONTAINER_OF(req, connection, write_req);
-    conn->pn->outstanding--;
-    ASSERT(c_busy == conn->wrstate);
-    conn->wrstate = c_stop;
-
-    direct = conn == &conn->pn->incoming ? STREAM_DOWN : STREAM_UP;
 
     snd_ctx = uv_req_get_data((uv_req_t*)req);
-    if ( snd_ctx->callback )
-        snd_ctx->callback(snd_ctx->param, direct, status, conn->pn->ctx);
 
+    conn = snd_ctx->conn;
+    conn->pn->outstanding--;
+
+    if ( snd_ctx->buf.buf_base )
+        free(snd_ctx->buf.buf_base);
     free(snd_ctx);
 }
 

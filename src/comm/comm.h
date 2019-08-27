@@ -109,8 +109,7 @@ typedef void (*write_stream_out_callback)(void* param, int direct, int status, v
 typedef struct {
     /* Interface for send data out */
     int (*write_stream_out)(
-        buf_range *buf, int direct, void *stream_id,
-        write_stream_out_callback callback, void *param);
+        const char *buf, size_t len, int direct, void *stream_id);
 
     void (*stream_pause)(void *stream_id, int direct, int pause);
 } ioctl_port;

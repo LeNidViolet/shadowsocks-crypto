@@ -112,7 +112,6 @@ void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size
 /* TLS.C */
 int  tls_associate_context(mbedtls_ssl_context *ssl,  int as_server);
 int  tls_recv_done_do_next(tls_session *ts);
-void tls_send_done_do_next(tls_session *ts);
 int  tls_resign(
     const char *sni_name,
     const mbedtls_x509_crt *ws_crt,

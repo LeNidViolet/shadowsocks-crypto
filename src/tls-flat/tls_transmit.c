@@ -119,12 +119,12 @@ int handle_tls_transmit(tls_session *ts) {
         ts_p->buf_out.data_base,
         ts_p->buf_out.data_len);
 
-    ret = mbedtls_ssl_write(
+    mbedtls_ssl_write(
         &ts_p->ssl,
         (unsigned char*)ts_p->buf_out.data_base,
         ts_p->buf_out.data_len);
-    ASSERT(MBEDTLS_ERR_SSL_WANT_WRITE == ret);
 
+    action = handle_tls_transmit(ts);
 BREAK_LABEL:
 
     return action;

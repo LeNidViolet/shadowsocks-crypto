@@ -24,10 +24,6 @@
 #include "mbedtls/util.h"
 #include "internal.h"
 
-
-static void do_handshake_next(tls_session *ts);
-static void do_transmit_next(tls_session *ts);
-
 /**
  * \brief                           SNI callback.
  *                                  该回调发生于 SSL 握手 CLIENT HELLO阶段
@@ -91,45 +87,6 @@ int tls_recv_done_do_next(tls_session *ts) {
     }
 
     return ret;
-}
-
-void tls_send_done_do_next(tls_session *ts) {
-    switch ( ts->tls_state ) {
-    case tls_handshaking:
-        do_handshake_next(ts);
-        break;
-    case tls_transmitting:
-        do_transmit_next(ts);
-        break;
-    default:
-        UNREACHABLE();
-        break;
-    }
-}
-
-static void do_handshake_next(tls_session *ts) {
-    handle_tls_handshake(ts);
-}
-
-static void do_transmit_next(tls_session *ts) {
-    tls_session *ts_p;
-    int ret;
-
-    ts_p = ts->is_local ? &ts->ss->clt : &ts->ss->srv;
-    ASSERT(write_waitack == ts->wrstate);
-
-    ret = mbedtls_ssl_write(
-        &ts->ssl,
-        (unsigned char*)ts->buf_out.data_base,
-        ts->buf_out.data_len);
-    if ( MBEDTLS_ERR_SSL_WANT_WRITE == ret ) {
-
-    } else {
-        ASSERT(ret == ts->buf_out.data_len);
-        ts->buf_out.data_len = 0;
-
-        handle_tls_transmit(ts_p);
-    }
 }
 
 

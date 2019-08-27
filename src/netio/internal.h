@@ -138,8 +138,7 @@ int  ssnetio_on_plain_stream(connection *conn);
 void ssnetio_on_plain_dgram(buf_range *buf, int direct, void *ctx);
 
 int  ssnetio_write_stream_out(
-    buf_range *buf, int direct, void *stream_id,
-    write_stream_out_callback callback, void *param);
+    const char *buf, size_t len, int direct, void *stream_id);
 void ssnetio_stream_pause(void *stream_id, int direct, int pause);
 
 
