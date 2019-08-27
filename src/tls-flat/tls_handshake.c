@@ -66,7 +66,6 @@ int handle_tls_handshake(tls_session *ts) {
                     ss->index,
                     ss->sni_name,
                     ret);
-                ss->closing = 1;
                 action = TERMINATE;
             } else {
                 /* 继续server侧的握手 */
@@ -112,7 +111,6 @@ int handle_tls_handshake(tls_session *ts) {
             ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
             ts->is_local ? "SERVER" : "CLIENT"
         );
-        ss->closing = 1;
         action = TERMINATE;
         break;
 
@@ -125,7 +123,6 @@ int handle_tls_handshake(tls_session *ts) {
             ret,
             ts->is_local ? "SERVER" : "CLIENT"
         );
-        ss->closing = 1;
         action = TERMINATE;
         break;
     }

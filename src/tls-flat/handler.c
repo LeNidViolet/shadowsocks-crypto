@@ -125,11 +125,6 @@ int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     ss = (stream_session*)ctx;
     ASSERT(ss);
 
-    if ( ss->closing ) {
-        action = TERMINATE;
-        BREAK_NOW;
-    }
-
     ts = direct == STREAM_UP ? &ss->srv : &ss->clt;
     in = &ts->buf_in;
 

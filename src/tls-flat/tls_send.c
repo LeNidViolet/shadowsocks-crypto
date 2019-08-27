@@ -123,7 +123,6 @@ static void on_tls_send_done(void *param, int direct, int status, void *ctx) {
                        ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
                        ts->is_local ? "SERVER" : "CLIENT",
                        status);
-        ss->closing = 1;
     }
 
     buf_range_free(&snd_ctx->buf);

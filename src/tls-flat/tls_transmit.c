@@ -50,7 +50,6 @@ int handle_tls_transmit(tls_session *ts) {
                        ss->sni_name,
                        ret,
                        ts->is_local ? "SERVER" : "CLIENT");
-        ss->closing = 1;
         action = TERMINATE;
         BREAK_NOW;
     }
@@ -60,7 +59,6 @@ int handle_tls_transmit(tls_session *ts) {
                        ss->index,
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
-        ss->closing = 1;
         action = TERMINATE;
         BREAK_NOW;
     }
@@ -71,7 +69,6 @@ int handle_tls_transmit(tls_session *ts) {
                        ss->sni_name,
                        ts->is_local ? "SERVER" : "CLIENT");
         /* TODO: HANDLE MBEDTLS_ERR_SSL_CLIENT_RECONNECT CORRECT */
-        ss->closing = 1;
         action = TERMINATE;
         BREAK_NOW;
     }
@@ -96,7 +93,6 @@ int handle_tls_transmit(tls_session *ts) {
                        ss->sni_name,
                        ret,
                        ts->is_local ? "SERVER" : "CLIENT");
-        ss->closing = 1;
         action = TERMINATE;
         BREAK_NOW;
     }

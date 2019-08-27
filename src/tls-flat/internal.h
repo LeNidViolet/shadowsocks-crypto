@@ -62,8 +62,6 @@ typedef struct stream_session_{
 
     char sni_name[128];
 
-    int closing;
-
     tls_session srv;
     tls_session clt;
 
