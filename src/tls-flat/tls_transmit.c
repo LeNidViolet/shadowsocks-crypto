@@ -50,6 +50,7 @@ int handle_tls_transmit(tls_session *ts) {
                        ss->sni_name,
                        ret,
                        ts->is_local ? "SERVER" : "CLIENT");
+        mbedtls_ssl_close_notify(&ts_p->ssl);
         action = TERMINATE;
         BREAK_NOW;
     }
