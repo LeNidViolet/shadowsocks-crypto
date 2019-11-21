@@ -38,35 +38,43 @@ typedef struct {
     const char *root_key;       /* 根证书秘钥 文件路径 */
 } sscrypto_cfg;
 
+typedef void (*FN_CALLBACK_ONMSG)   (int level, const char *msg);
+typedef void (*FN_CALLBACK_ONBIND)  (const char *host, unsigned short port);
+typedef void (*FN_CALLBACK_ONSTREAMCONNECTIONMADE) (
+    const char *domain_local,
+    const char *ip_local,
+    unsigned short port_local,
+    const char *domain_remote,
+    const char *ip_remote,
+    unsigned short port_remote,
+    int stream_index);
+typedef void (*FN_CALLBACK_ONSTREAMTEARDOWN) (int stream_index);
+typedef void (*FN_CALLBACK_ONDGRAMCONNECTIONMADE) (
+    const char *domain_local,
+    const char *ip_local,
+    unsigned short port_local,
+    const char *domain_remote,
+    const char *ip_remote,
+    unsigned short port_remote,
+    int dgram_index);
+typedef void (*FN_CALLBACK_ONDGRAMTEARDOWN) (int dgram_index);
+typedef void (*FN_CALLBACK_ONPLAINSTREAM) (const char *data, size_t data_len, bool send_out, int stream_index);
+typedef void (*FN_CALLBACK_ONPLAINDGRAM) (const char *data, size_t data_len, bool send_out, int dgram_index);
+
 typedef struct {
-    void (*on_msg)(int level, const char *msg);
-    void (*on_bind)(const char *host, unsigned short port);
-    void (*on_stream_connection_made)(
-        const char *domain_local,
-        const char *ip_local,
-        unsigned short port_local,
-        const char *domain_remote,
-        const char *ip_remote,
-        unsigned short port_remote,
-        int stream_index);
-    void (*on_stream_teardown)(int stream_index);
+    FN_CALLBACK_ONMSG                   on_msg;
+    FN_CALLBACK_ONBIND                  on_bind;
+    FN_CALLBACK_ONSTREAMCONNECTIONMADE  on_stream_connection_made;
+    FN_CALLBACK_ONSTREAMTEARDOWN        on_stream_teardown;
 
     /* A new udp dgram request
      * set data to a context associate with it
      * */
-    void (*on_dgram_connection_made)(
-        const char *domain_local,
-        const char *ip_local,
-        unsigned short port_local,
-        const char *domain_remote,
-        const char *ip_remote,
-        unsigned short port_remote,
-        int dgram_index);
-    void (*on_dgram_teardown)(int dgram_index);
+    FN_CALLBACK_ONDGRAMCONNECTIONMADE   on_dgram_connection_made;
+    FN_CALLBACK_ONDGRAMTEARDOWN         on_dgram_teardown;
 
-
-    void (*on_plain_stream)(const char *data, size_t data_len, bool send_out, int stream_index);
-    void (*on_plain_dgram)(const char *data, size_t data_len, bool send_out, int dgram_index);
+    FN_CALLBACK_ONPLAINSTREAM           on_plain_stream;
+    FN_CALLBACK_ONPLAINDGRAM            on_plain_dgram;
 } sscrypto_callback;
 
 typedef struct {
