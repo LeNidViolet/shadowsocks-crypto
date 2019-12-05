@@ -214,7 +214,7 @@ static void dns_cache_free(dns_cache_entry *dnsc) {
     entry_outstanding--;
 
     if ( 0 == entry_outstanding )
-        printf("dns cache entry outstanding return to 0\n");
+        ssnetio_on_msg(INFO, "dns cache entry outstanding return to 0");
     if ( 0 == ip_outstanding )
-        printf("dns cache ip outstanding return to 0\n");
+        ssnetio_on_msg(INFO, "dns cache ip outstanding return to 0");
 }

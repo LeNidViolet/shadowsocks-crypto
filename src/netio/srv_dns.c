@@ -353,5 +353,5 @@ void server_dns_stop() {
     dnssrv_signal_close();
     dns_cache_clear();
 
-    printf("dns server exited\n");
+    ssnetio_on_msg(KEY, "dns server exited");
 }

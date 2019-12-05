@@ -124,5 +124,5 @@ static void dgrams_free(dgrams *ds) {
     ds_outstanding--;
 
     if ( 0 == ds_outstanding )
-        printf("dgrams outstanding return to 0\n");
+        ssnetio_on_msg(KEY, "dgrams outstanding return to 0");
 }

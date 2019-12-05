@@ -155,8 +155,7 @@ void server_tcp_stop() {
     tcp_handle_index = 0;
 
     tcpsrv_signal_close();
-
-    printf("tcp server exited\n");
+    ssnetio_on_msg(KEY, "tcp server exited");
 }
 
 
@@ -598,7 +597,7 @@ static int do_clear(proxy_node *pn) {
     pn_outstanding--;
 
     if ( 0 == pn_outstanding )
-        printf("pn outstanding return to 0\n");
+        ssnetio_on_msg(INFO, "pn outstanding return to 0");
 
     return 0;
 }

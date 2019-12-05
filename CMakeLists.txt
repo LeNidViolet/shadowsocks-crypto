@@ -75,4 +75,4 @@ SET(SHADOWSOCKSCRYPTO_SRC
         )
 
 ADD_LIBRARY(shadowsocks-crypto STATIC ${SHADOWSOCKSCRYPTO_SRC})
-TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls uv)
+TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls uv_a)

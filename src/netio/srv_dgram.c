@@ -155,8 +155,7 @@ void server_dgram_stop() {
     dgram_handle_index = 0;
 
     dgramsrv_signal_close();
-
-    printf("dgram server exited\n");
+    ssnetio_on_msg(KEY,"dgram server exited");
 }
 
 

@@ -275,7 +275,4 @@ void crt_pool_clear(void) {
     }
 
     ASSERT(0 == pool_ncrt);
-
-    if ( 0 == pool_ncrt )
-        printf("cert cache return to 0\n");
 }
