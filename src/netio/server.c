@@ -187,17 +187,19 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
             BREAK_NOW;
         }
 
-        /* dns bind */
-        sockaddr_set_port(&s.addr, dns_port);
-        ret = server_dns_launch(loop, &s.addr);
-        if ( 0 != ret ) {
-            ssnetio_on_msg(
-                ERROR,
-                "dns server launch failed: %s [%s:%d]",
-                uv_strerror(ret),
-                address.ip,
-                dns_port);
-            BREAK_NOW;
+        if ( srv_ctx.config.create_dns_srv ) {
+            /* dns bind */
+            sockaddr_set_port(&s.addr, dns_port);
+            ret = server_dns_launch(loop, &s.addr);
+            if ( 0 != ret ) {
+                ssnetio_on_msg(
+                    ERROR,
+                    "dns server launch failed: %s [%s:%d]",
+                    uv_strerror(ret),
+                    address.ip,
+                    dns_port);
+                BREAK_NOW;
+            }
         }
 
         ssnetio_on_bind(address.ip, address.port);
