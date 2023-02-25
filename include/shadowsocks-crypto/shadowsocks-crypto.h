@@ -94,7 +94,15 @@ typedef struct {
  *
  * @return                      0 on success
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int sscrypto_launch(const sscrypto_ctx *ctx);
 void sscrypto_stop();
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
 #endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H
