@@ -159,7 +159,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
 
         // 组合地址
         sockaddr_cpy(ai->ai_addr, &s.addr);
-        sockaddr_set_port(&s.addr, srv_ctx.config.bind_port);
+        sockaddr_assign_port(&s.addr, srv_ctx.config.bind_port);
 
         CHECK(0 == sockaddr_to_str(&s.addr, &address, 1));
 
@@ -189,7 +189,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
 
         if ( srv_ctx.config.create_dns_srv ) {
             /* dns bind */
-            sockaddr_set_port(&s.addr, dns_port);
+            sockaddr_assign_port(&s.addr, dns_port);
             ret = server_dns_launch(loop, &s.addr);
             if ( 0 != ret ) {
                 ssnetio_on_msg(

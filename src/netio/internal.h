@@ -107,7 +107,7 @@ typedef struct proxy_node_{
 int  sockaddr_to_str(const struct sockaddr *addr, address *addr_s, int set_port);
 void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst);
 int  sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port);
-void sockaddr_set_port(struct sockaddr *addr, unsigned short port);
+void sockaddr_assign_port(struct sockaddr *addr, unsigned short port);
 int  str_tcp_endpoint(const uv_tcp_t *tcp_handle, endpoint ep, address *addr_s);
 
 enum {

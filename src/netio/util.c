@@ -118,7 +118,7 @@ BREAK_LABEL:
     return ret;
 }
 
-void sockaddr_set_port(struct sockaddr *addr, unsigned short port) {
+void sockaddr_assign_port(struct sockaddr *addr, unsigned short port) {
     struct sockaddr_in6 *in6;
     struct sockaddr_in *in;
 

@@ -310,7 +310,7 @@ static void dgram_lookup(dgrams *ds) {
 
         if ( addr ) {
             sockaddr_cpy(addr, &ds->remote.addr);
-            sockaddr_set_port(&ds->remote.addr, ds->remote_peer.port);
+            sockaddr_assign_port(&ds->remote.addr, ds->remote_peer.port);
 
             // remote_peer.ip
             sockaddr_to_str(addr, &ds->remote_peer, 0);
@@ -361,7 +361,7 @@ static void dgram_getaddrinfo_done(
         }
 
         sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &ds->remote.addr);
-        sockaddr_set_port(&ds->remote.addr, ds->remote_peer.port);
+        sockaddr_assign_port(&ds->remote.addr, ds->remote_peer.port);
 
         sockaddr_to_str(&ds->remote.addr, &ds->remote_peer, 0);
         ssnetio_on_new_dgram(&ds->local_peer, &ds->remote_peer, &ds->ctx);

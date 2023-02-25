@@ -49,8 +49,6 @@ typedef struct {
     int first_encrypt;                                                  /* 首次加密解密操作略有不同 */
     int first_decrypt;
 
-    int is_tls;                                                         /* 是否是TLS流 */
-    void *tls_ctx;                                                      /* TLSFLAT使用的环境CTX */
     void *stream_id;                                                    /* 透明数据,回调时使用 */
 } STREAM_SESSION_CRYP;
 
@@ -122,7 +120,6 @@ void sscrypto_on_new_stream(const address *addr, void **ctx, void *stream_id) {
     init_cipher(&session->decrypt_ctx, MBEDTLS_DECRYPT);
     session->first_encrypt = 1;
     session->first_decrypt = 1;
-    session->is_tls = 0;
     session->stream_id = stream_id;
     session->index = stream_index++;
     session->connected = 0;
@@ -137,11 +134,6 @@ void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx) {
 
     session = (STREAM_SESSION_CRYP *)ctx;
     CHECK(session);
-
-    if ( 443 == addr->remote->port ) {              /* 如果是TLS流, 通知TLSFLAT */
-        session->is_tls = 1;
-        tlsflat_on_stream_connection_made(addr, session->stream_id, session, &session->tls_ctx);
-    }
 
     if ( env.callbacks.on_stream_connection_made ) {
         env.callbacks.on_stream_connection_made(
@@ -162,10 +154,6 @@ void sscrypto_on_stream_teardown(void *ctx) {
     STREAM_SESSION_CRYP *session;
     session = (STREAM_SESSION_CRYP *)ctx;
     CHECK(session);
-
-    if ( session->is_tls ) {
-        tlsflat_on_stream_teardown(session->tls_ctx);
-    }
 
     if ( env.callbacks.on_stream_teardown ) {
         /* 如果链接未链接上 不用继续向上调用 */
@@ -233,12 +221,6 @@ int sscrypto_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
 
     session = (STREAM_SESSION_CRYP *)ctx;
     CHECK(session);
-
-    /* 如果是 TLS 数据流, 等待 TLS 解密的回调中再向上通报数据 (sscrypto_tls_on_plain_stream) */
-    if ( session->is_tls ) {
-        action = tlsflat_on_plain_stream(buf, direct, session->tls_ctx);
-        BREAK_NOW;
-    }
 
     if ( env.callbacks.on_plain_stream ) {
         env.callbacks.on_plain_stream(

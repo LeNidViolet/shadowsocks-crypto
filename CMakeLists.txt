@@ -50,19 +50,6 @@ SET(SHADOWSOCKSNETIO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/netio/udns/udns_XtoX.c
         )
 
-SET(TLSFLAT_SRC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tlsflat.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/root.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/handler.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/crt_pool.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_send.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_recv.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_handshake.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/tls_transmit.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/tls-flat/util.c
-        )
-
 SET(SHADOWSOCKSCRYPTO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/launch.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
@@ -71,7 +58,6 @@ SET(SHADOWSOCKSCRYPTO_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/comm/list.c
 
         ${SHADOWSOCKSNETIO_SRC}
-        ${TLSFLAT_SRC}
         )
 
 ADD_LIBRARY(shadowsocks-crypto STATIC ${SHADOWSOCKSCRYPTO_SRC})

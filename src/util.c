@@ -75,7 +75,7 @@ int gen_key(const char *seed, unsigned char *key, size_t key_len) {
             pos = key;
         }
 
-        ret = mbedtls_md5_ret(buf, update_len, digest);
+        ret = mbedtls_md5(buf, update_len, digest);
         BREAK_ON_FAILURE(ret);
 
         cpy_len = rm_len >= sizeof(digest) ? sizeof(digest) : rm_len;

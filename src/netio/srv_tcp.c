@@ -634,7 +634,7 @@ static void conn_getaddrinfo_done(
         }
 
         sockaddr_cpy(ai_ipv4 ? ai_ipv4->ai_addr : addrs->ai_addr, &outgoing->t.addr);
-        sockaddr_set_port(&outgoing->t.addr, outgoing->peer.port);
+        sockaddr_assign_port(&outgoing->t.addr, outgoing->peer.port);
 
         /* 设置UPSTREAM远端 IP信息 */
         sockaddr_to_str(&outgoing->t.addr, &outgoing->peer, 0);
@@ -837,7 +837,7 @@ static int do_handshake(proxy_node *pn) {
         sockaddr_to_str(addr, &outgoing->peer, 0);
 
         sockaddr_cpy(addr, &outgoing->t.addr);
-        sockaddr_set_port(&outgoing->t.addr, outgoing->peer.port);
+        sockaddr_assign_port(&outgoing->t.addr, outgoing->peer.port);
         new_state = do_req_lookup(pn);
 
     } else {

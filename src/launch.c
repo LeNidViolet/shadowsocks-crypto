@@ -52,15 +52,6 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
 
     /* 获取NETIO底层发送数据等接口.需要在TLSFLAT中使用 */
     ssnetio_server_port(&io_port);
-    /* 初始化 TLS 部分 */
-    ret = tlsflat_init(
-        &io_port,
-        ctx->config.root_cert,
-        ctx->config.root_key);
-    if ( 0 != ret ) {
-        sscrypto_on_msg(ERROR, "tlsflat init failed");
-        BREAK_NOW;
-    }
 
 
     /* 初始化加密解密单元 */
@@ -75,9 +66,6 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
 
     /* 释放加密解密单元资源 */
     free_crypt_unit();
-
-    /* 释放 TLS 资源 */
-    tlsflat_clear();
 
 BREAK_LABEL:
 
