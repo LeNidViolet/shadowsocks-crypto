@@ -37,7 +37,7 @@ static mbedtls_cipher_context_t decrypt_dgram_ctx;                      /* UDP�
 
 /* TCP流CONTEXT */
 typedef struct {
-    int index;
+    unsigned long long index;
     int connected;                                                      /* 是否连接上 */
 
     mbedtls_cipher_context_t encrypt_ctx;                               /* 每个TCP流都有自己的加密解密环境CTX */
@@ -55,7 +55,7 @@ typedef struct {
 
 /* UDP流CONTEXT */
 typedef struct {
-    int index;
+    unsigned long long index;
 } DGRAM_SESSION_CRYP;
 
 
@@ -108,7 +108,7 @@ void sscrypto_on_bind(const char *host, unsigned short port) {
 }
 
 void sscrypto_on_new_stream(const address *addr, void **ctx, void *stream_id) {
-    static int stream_index = 0;
+    static unsigned long long stream_index = 0;
     STREAM_SESSION_CRYP *session;
 
     (void)addr;
@@ -174,7 +174,7 @@ void sscrypto_on_stream_teardown(void *ctx) {
 }
 
 void sscrypto_on_new_dgram(const address_pair *addr, void **ctx) {
-    static int dgram_index = 0;
+    static unsigned long long dgram_index = 0;
     DGRAM_SESSION_CRYP *session;
 
     ENSURE((session = mbedtls_calloc(1, sizeof(*session))) != NULL);

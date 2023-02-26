@@ -46,8 +46,8 @@ typedef void (*FN_CALLBACK_ONSTREAMCONNECTIONMADE) (
     const char *domain_remote,
     const char *ip_remote,
     unsigned short port_remote,
-    int stream_index);
-typedef void (*FN_CALLBACK_ONSTREAMTEARDOWN) (int stream_index);
+    unsigned long long stream_index);
+typedef void (*FN_CALLBACK_ONSTREAMTEARDOWN) (unsigned long long stream_index);
 typedef void (*FN_CALLBACK_ONDGRAMCONNECTIONMADE) (
     const char *domain_local,
     const char *ip_local,
@@ -55,10 +55,10 @@ typedef void (*FN_CALLBACK_ONDGRAMCONNECTIONMADE) (
     const char *domain_remote,
     const char *ip_remote,
     unsigned short port_remote,
-    int dgram_index);
-typedef void (*FN_CALLBACK_ONDGRAMTEARDOWN) (int dgram_index);
-typedef void (*FN_CALLBACK_ONPLAINSTREAM) (const char *data, size_t data_len, bool send_out, int stream_index);
-typedef void (*FN_CALLBACK_ONPLAINDGRAM) (const char *data, size_t data_len, bool send_out, int dgram_index);
+    unsigned long long dgram_index);
+typedef void (*FN_CALLBACK_ONDGRAMTEARDOWN) (unsigned long long dgram_index);
+typedef void (*FN_CALLBACK_ONPLAINSTREAM) (const char *data, size_t data_len, bool send_out, unsigned long long stream_index);
+typedef void (*FN_CALLBACK_ONPLAINDGRAM) (const char *data, size_t data_len, bool send_out, unsigned long long dgram_index);
 
 typedef struct {
     FN_CALLBACK_ONMSG                   on_msg;
