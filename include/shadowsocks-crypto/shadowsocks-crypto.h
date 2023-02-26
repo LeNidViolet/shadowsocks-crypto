@@ -34,8 +34,6 @@ typedef struct {
     const char *password;
     const char *method;
 
-    const char *root_cert;      /* 根证书 文件路径 */
-    const char *root_key;       /* 根证书秘钥 文件路径 */
     bool create_dns_srv;        /* 是否创建 DNS 服务 */
 } sscrypto_cfg;
 

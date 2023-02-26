@@ -35,8 +35,6 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
     BREAK_ON_NULL(ctx);
     BREAK_ON_NULL(ctx->config.method);
     BREAK_ON_NULL(ctx->config.password);
-    BREAK_ON_NULL(ctx->config.root_cert);
-    BREAK_ON_NULL(ctx->config.root_key);
 
     env.method = get_method_by_name(ctx->config.method);
     BREAK_ON_NULL(env.method);
