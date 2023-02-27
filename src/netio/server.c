@@ -41,13 +41,13 @@ int ssnetio_server_launch(const sscrypto_ctx *ctx) {
     BREAK_ON_NULL(ctx);
     BREAK_ON_NULL(ctx->config.bind_host);
     BREAK_ON_NULL(ctx->config.bind_port);
-    BREAK_ON_NULL(ctx->config.idel_timeout);
+    BREAK_ON_NULL(ctx->config.idle_timeout);
 
     dgrams_init();
     dns_cache_init();
 
     memcpy(&srv_ctx, ctx, sizeof(srv_ctx));
-    srv_ctx.config.idel_timeout *= 1000;
+    srv_ctx.config.idle_timeout *= 1000;
 
     ret = server_run(&srv_ctx);
 

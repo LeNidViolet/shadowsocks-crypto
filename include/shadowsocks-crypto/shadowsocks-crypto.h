@@ -29,7 +29,7 @@
 typedef struct {
     const char *bind_host;
     unsigned short bind_port;
-    unsigned int idel_timeout;  /* 秒 */
+    unsigned int idle_timeout;  /* 秒 */
 
     const char *password;
     const char *method;

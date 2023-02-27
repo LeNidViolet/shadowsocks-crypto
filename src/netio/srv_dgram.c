@@ -526,7 +526,7 @@ static void dgram_timer_reset(dgrams *ds) {
     CHECK(0 == uv_timer_start(
         &ds->timer,
         dgram_timer_expire,
-        srv_ctx.config.idel_timeout,
+        srv_ctx.config.idle_timeout,
         0));
 }
 

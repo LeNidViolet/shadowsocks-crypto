@@ -222,7 +222,7 @@ static void on_connection(uv_stream_t *server, int status) {
     incoming->result = 0;
     incoming->rdstate = c_stop;
     incoming->wrstate = c_stop;
-    incoming->idle_timeout = srv_ctx.config.idel_timeout;
+    incoming->idle_timeout = srv_ctx.config.idle_timeout;
     CHECK(0 == uv_timer_init(loop, &incoming->timer_handle));
 
     CHECK(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
@@ -231,7 +231,7 @@ static void on_connection(uv_stream_t *server, int status) {
     outgoing->result = 0;
     outgoing->rdstate = c_stop;
     outgoing->wrstate = c_stop;
-    outgoing->idle_timeout = srv_ctx.config.idel_timeout;
+    outgoing->idle_timeout = srv_ctx.config.idle_timeout;
     CHECK(0 == uv_timer_init(loop, &outgoing->timer_handle));
 
     incoming->ss_buf.buf_base = incoming->ss_buf.data_base = incoming->slab;
