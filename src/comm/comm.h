@@ -65,8 +65,8 @@ if ( !(value) )                                         \
   ((type *) ((char *) (ptr) - ((char *) &((type *) 0)->field)))
 
 #define MAX_S5_HDR_LEN                          (255 + 6)
-#define MAX_SS_TCP_PAYLOAD_LEN                  (10 * 1024)
-#define MAX_SS_UDP_PAYLOAD_LEN                  (512)
+#define MAX_SS_TCP_PAYLOAD_LEN                  (32 * 1024)
+#define MAX_SS_UDP_PAYLOAD_LEN                  (1600)
 #define MAX_SS_SALT_LEN                         (32)
 #define MAX_SS_TAG_LEN                          (16)
 

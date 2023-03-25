@@ -30,7 +30,7 @@
 static unsigned int ssn_outstanding = 0;
 static unsigned int dsn_outstanding = 0;
 
-static unsigned char crypto_space[16 * 1024 + MAX_SS_TCP_WRAPPER_LEN];  /* 加密解密缓冲区 */
+static unsigned char crypto_space[256 * 1024 + MAX_SS_TCP_WRAPPER_LEN];  /* 加密解密缓冲区 */
 static mbedtls_cipher_context_t encrypt_dgram_ctx;                      /* UDP加密环境CTX */
 static mbedtls_cipher_context_t decrypt_dgram_ctx;                      /* UDP解密环境CTX */
 
