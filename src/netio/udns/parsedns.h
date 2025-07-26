@@ -68,7 +68,7 @@ typedef struct DNS_ANSWER_{
 	{
 		char			data[DNS_MAXDN];
 		unsigned int	ip;
-		uint8_t 		ipV6[16];
+		unsigned char	ipV6[16];
 	}rdata;
 }DNS_ANSWER, *PDNS_ANSWER;
 

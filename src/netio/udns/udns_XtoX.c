@@ -30,9 +30,17 @@
 
 #ifdef HAVE_INET_PTON_NTOP
 
+#ifdef WINDOWS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
+
+
+
 
 const char *dns_ntop(int af, const void *src, char *dst, int size) {
   return inet_ntop(af, src, dst, size);

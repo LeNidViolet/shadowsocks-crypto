@@ -26,7 +26,7 @@
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 
 // ==========
-static const int dgram_handle_max = 8;
+#define dgram_handle_max 8
 static int dgram_handle_index = 0;
 static uv_udp_t *dgram_handles[dgram_handle_max] = { NULL };
 
@@ -155,7 +155,7 @@ void server_dgram_stop() {
     dgram_handle_index = 0;
 
     dgramsrv_signal_close();
-    ssnetio_on_msg(KEY,"dgram server exited");
+    ssnetio_on_msg(LOG_KEY,"dgram server exited");
 }
 
 
@@ -227,14 +227,14 @@ static void dgram_read_done_local(
 
     /* decrypt udp data */
     if ( 0 != ssnetio_on_dgram_decrypt(buf_r, 0) ) {
-        ssnetio_on_msg(WARN, "decrypt dgram packet failed");
+        ssnetio_on_msg(LOG_WARN, "decrypt dgram packet failed");
         BREAK_NOW;
     }
     BREAK_ON_NULL(buf_r->data_len);
 
     /* obtain address info  srv_addr.domain/port被设置 */
     if ( 0 != s5_parse_addr(buf_r, &srv_addr) ) {
-        ssnetio_on_msg(WARN, "parse dgram packet address failed");
+        ssnetio_on_msg(LOG_WARN, "parse dgram packet address failed");
         BREAK_NOW;
     }
 
@@ -370,7 +370,7 @@ static void dgram_getaddrinfo_done(
         dgram_send_remote(ds);
     } else {
         ssnetio_on_msg(
-            WARN,
+            LOG_WARN,
             "dgram getaddrinfo failed: %s, domain: %s",
             uv_strerror(status),
             ds->remote_peer.domain);
@@ -507,7 +507,7 @@ static void dgram_read_done_remote(
 
 
     if ( 0 != ssnetio_on_dgram_encrypt(buf_r, 0) ) {
-        ssnetio_on_msg(WARN, "encrypt dgram packet failed");
+        ssnetio_on_msg(LOG_WARN, "encrypt dgram packet failed");
         BREAK_NOW;
     }
 

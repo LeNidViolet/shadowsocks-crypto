@@ -280,99 +280,99 @@ static void waitdns(struct ipcheck *ipc) {
       break;
   }
 }
-
-int main2(int argc, char **argv) {
-  int c;
-  struct ipcheck ipc;
-  char *nameserver = NULL;
-  int zgiven = 0;
-
-  if (!(progname = strrchr(argv[0], '/'))) progname = argv[0];
-  else argv[0] = ++progname;
-
-  while((c = getopt(argc, argv, "hqtvms:S:cn:")) != EOF) switch(c) {
-  case 's': ++zgiven; addzone(optarg); break;
-  case 'S':
-    ++zgiven;
-    if (addzonefile(optarg)) break;
-    error(1, "unable to read zonefile `%s'", optarg);
-  case 'c': ++zgiven; nzones = 0; break;
-  case 'q': --verbose; break;
-  case 'v': ++verbose; break;
-  case 't': do_txt = 1; break;
-  case 'n': nameserver = optarg; break;
-  case 'm': ++stopfirst; break;
-  case 'h':
-    printf("%s: %s (udns library version %s).\n",
-           progname, version, dns_version());
-    printf("Usage is: %s [options] address..\n", progname);
-    printf(
-"Where options are:\n"
-" -h - print this help and exit\n"
-" -s service - add the service (DNSBL zone) to the serice list\n"
-" -S service-file - add the DNSBL zone(s) read from the given file\n"
-" -c - clear service list\n"
-" -v - increase verbosity level (more -vs => more verbose)\n"
-" -q - decrease verbosity level (opposite of -v)\n"
-" -t - obtain and print TXT records if any\n"
-" -m - stop checking after first address match in any list\n"
-" -n ipaddr - use the given nameserver instead of the default\n"
-"(if no -s or -S option is given, use $RBLCHECK_ZONES, ~/.rblcheckrc\n"
-"or /etc/rblcheckrc in that order)\n"
-    );
-    return 0;
-  default:
-    error(1, "use `%s -h' for help", progname);
-  }
-
-  if (!zgiven) {
-    char *s = getenv("RBLCHECK_ZONES");
-    if (s) {
-      char *k;
-      s = strdup(s);
-      for(k = strtok(s, " \t"); k; k = strtok(NULL, " \t"))
-        addzone(k);
-      free(s);
-    }
-    else {	/* probably worthless on windows? */
-      char *path;
-      char *home = getenv("HOME");
-      if (!home) home = ".";
-      path = malloc(strlen(home) + 1 + sizeof(".rblcheckrc"));
-      sprintf(path, "%s/.rblcheckrc", home);
-      if (!addzonefile(path))
-        addzonefile("/etc/rblcheckrc");
-      free(path);
-    }
-  }
-  if (!nzones)
-    error(1, "no service (zone) list specified (-s or -S option)");
-
-  argv += optind;
-  argc -= optind;
-
-  if (!argc)
-    return 0;
-
-  if (dns_init(NULL, 0) < 0)
-    error(1, "unable to initialize DNS library: %s", strerror(errno));
-  if (nameserver) {
-    dns_add_serv(NULL, NULL);
-    if (dns_add_serv(NULL, nameserver) < 0)
-      error(1, "wrong IP address for a nameserver: `%s'", nameserver);
-  }
-  if (dns_open(NULL) < 0)
-    error(1, "unable to initialize DNS library: %s", strerror(errno));
-
-  for (c = 0; c < argc; ++c) {
-    if (c && (verbose > 1 || (verbose == 1 && do_txt))) putchar('\n');
-    memset(&ipc, 0, sizeof(ipc));
-    ipc.name = argv[c];
-    submit(&ipc);
-    waitdns(&ipc);
-    display_result(&ipc);
-    if (stopfirst > 1 && listed) break;
-  }
-
-  return listed ? 100 : failures ? 2 : 0;
-}
+//
+// int main2(int argc, char **argv) {
+//   int c;
+//   struct ipcheck ipc;
+//   char *nameserver = NULL;
+//   int zgiven = 0;
+//
+//   if (!(progname = strrchr(argv[0], '/'))) progname = argv[0];
+//   else argv[0] = ++progname;
+//
+//   while((c = getopt(argc, argv, "hqtvms:S:cn:")) != EOF) switch(c) {
+//   case 's': ++zgiven; addzone(optarg); break;
+//   case 'S':
+//     ++zgiven;
+//     if (addzonefile(optarg)) break;
+//     error(1, "unable to read zonefile `%s'", optarg);
+//   case 'c': ++zgiven; nzones = 0; break;
+//   case 'q': --verbose; break;
+//   case 'v': ++verbose; break;
+//   case 't': do_txt = 1; break;
+//   case 'n': nameserver = optarg; break;
+//   case 'm': ++stopfirst; break;
+//   case 'h':
+//     printf("%s: %s (udns library version %s).\n",
+//            progname, version, dns_version());
+//     printf("Usage is: %s [options] address..\n", progname);
+//     printf(
+// "Where options are:\n"
+// " -h - print this help and exit\n"
+// " -s service - add the service (DNSBL zone) to the serice list\n"
+// " -S service-file - add the DNSBL zone(s) read from the given file\n"
+// " -c - clear service list\n"
+// " -v - increase verbosity level (more -vs => more verbose)\n"
+// " -q - decrease verbosity level (opposite of -v)\n"
+// " -t - obtain and print TXT records if any\n"
+// " -m - stop checking after first address match in any list\n"
+// " -n ipaddr - use the given nameserver instead of the default\n"
+// "(if no -s or -S option is given, use $RBLCHECK_ZONES, ~/.rblcheckrc\n"
+// "or /etc/rblcheckrc in that order)\n"
+//     );
+//     return 0;
+//   default:
+//     error(1, "use `%s -h' for help", progname);
+//   }
+//
+//   if (!zgiven) {
+//     char *s = getenv("RBLCHECK_ZONES");
+//     if (s) {
+//       char *k;
+//       s = strdup(s);
+//       for(k = strtok(s, " \t"); k; k = strtok(NULL, " \t"))
+//         addzone(k);
+//       free(s);
+//     }
+//     else {	/* probably worthless on windows? */
+//       char *path;
+//       char *home = getenv("HOME");
+//       if (!home) home = ".";
+//       path = malloc(strlen(home) + 1 + sizeof(".rblcheckrc"));
+//       sprintf(path, "%s/.rblcheckrc", home);
+//       if (!addzonefile(path))
+//         addzonefile("/etc/rblcheckrc");
+//       free(path);
+//     }
+//   }
+//   if (!nzones)
+//     error(1, "no service (zone) list specified (-s or -S option)");
+//
+//   argv += optind;
+//   argc -= optind;
+//
+//   if (!argc)
+//     return 0;
+//
+//   if (dns_init(NULL, 0) < 0)
+//     error(1, "unable to initialize DNS library: %s", strerror(errno));
+//   if (nameserver) {
+//     dns_add_serv(NULL, NULL);
+//     if (dns_add_serv(NULL, nameserver) < 0)
+//       error(1, "wrong IP address for a nameserver: `%s'", nameserver);
+//   }
+//   if (dns_open(NULL) < 0)
+//     error(1, "unable to initialize DNS library: %s", strerror(errno));
+//
+//   for (c = 0; c < argc; ++c) {
+//     if (c && (verbose > 1 || (verbose == 1 && do_txt))) putchar('\n');
+//     memset(&ipc, 0, sizeof(ipc));
+//     ipc.name = argv[c];
+//     submit(&ipc);
+//     waitdns(&ipc);
+//     display_result(&ipc);
+//     if (stopfirst > 1 && listed) break;
+//   }
+//
+//   return listed ? 100 : failures ? 2 : 0;
+// }

@@ -25,8 +25,9 @@
 # include "config.h"
 #endif
 #ifdef WINDOWS
-#include <windows.h>
+// #include <windows.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -559,201 +560,201 @@ static void dnscb(struct dns_ctx *ctx, void *result, void *data) {
   free(result);
   query_free(q);
 }
-
-int main1(int argc, char **argv) {
-  int i;
-  int fd;
-  fd_set fds;
-  struct timeval tv;
-  time_t now;
-  char *ns[DNS_MAXSERV];
-  int nns = 0;
-  struct query *q;
-  enum dns_type qtyp = 0;
-  struct dns_ctx *nctx = NULL;
-  int flags = 0;
-
-  if (!(progname = strrchr(argv[0], '/'))) progname = argv[0];
-  else argv[0] = ++progname;
-
-  if (argc <= 1)
-    die(0, "try `%s -h' for help", progname);
-
-  if (dns_init(NULL, 0) < 0 || !(nctx = dns_new(NULL)))
-    die(errno, "unable to initialize dns library");
-  /* we keep two dns contexts: one may be needed to resolve
-   * nameservers if given as names, using default options.
-   */
-
-  while((i = getopt(argc, argv, "vqt:c:an:o:f:h")) != EOF) switch(i) {
-  case 'v': ++verbose; break;
-  case 'q': --verbose; break;
-  case 't':
-    if (optarg[0] == '*' && !optarg[1])
-      i = DNS_T_ANY;
-    else if ((i = dns_findtypename(optarg)) <= 0)
-      die(0, "unrecognized query type `%s'", optarg);
-    qtyp = i;
-    break;
-  case 'c':
-    if (optarg[0] == '*' && !optarg[1])
-      i = DNS_C_ANY;
-    else if ((i = dns_findclassname(optarg)) < 0)
-      die(0, "unrecognized query class `%s'", optarg);
-    qcls = i;
-    break;
-  case 'a':
-    qtyp = DNS_T_ANY;
-    ++verbose;
-    break;
-  case 'n':
-    if (nns >= DNS_MAXSERV)
-      die(0, "too many nameservers, %d max", DNS_MAXSERV);
-    ns[nns++] = optarg;
-    break;
-  case 'o':
-  case 'f': {
-    char *opt;
-    const char *const delim = " \t,;";
-    for(opt = strtok(optarg, delim); opt != NULL; opt = strtok(NULL, delim)) {
-      if (dns_set_opts(NULL, optarg) == 0)
-        ;
-      else if (strcmp(opt, "aa") == 0) flags |= DNS_AAONLY;
-      else if (strcmp(optarg, "nord") == 0) flags |= DNS_NORD;
-      else if (strcmp(optarg, "dnssec") == 0) flags |= DNS_SET_DO;
-      else if (strcmp(optarg, "do")     == 0) flags |= DNS_SET_DO;
-      else if (strcmp(optarg, "cd") == 0) flags |= DNS_SET_CD;
-      else
-        die(0, "invalid option: `%s'", opt);
-    }
-    break;
-  }
-  case 'h':
-    printf(
-"%s: simple DNS query tool (using udns version %s)\n"
-"Usage: %s [options] domain-name...\n"
-"where options are:\n"
-" -h - print this help and exit\n"
-" -v - be more verbose\n"
-" -q - be less verbose\n"
-" -t type - set query type (A, AAA, PTR etc)\n"
-" -c class - set query class (IN (default), CH, HS, *)\n"
-" -a - equivalent to -t ANY -v\n"
-" -n ns - use given nameserver(s) instead of default\n"
-"  (may be specified multiple times)\n"
-" -o opt,opt,... (comma- or space-separated list,\n"
-"                 may be specified more than once):\n"
-"  set resovler options (the same as setting $RES_OPTIONS):\n"
-"   timeout:sec  - initial query timeout\n"
-"   attempts:num - number of attempt to resovle a query\n"
-"   ndots:num    - if name has more than num dots, lookup it before search\n"
-"   port:num     - port number for queries instead of default 53\n"
-"   udpbuf:num   - size of UDP buffer (use EDNS0 if >512)\n"
-"  or query flags:\n"
-"   aa,nord,dnssec,do,cd - set query flag (auth-only, no recursion,\n"
-"     enable DNSSEC (DNSSEC Ok), check disabled)\n"
-      , progname, dns_version(), progname);
-    return 0;
-  default:
-    die(0, "try `%s -h' for help", progname);
-  }
-
-  argc -= optind; argv += optind;
-  if (!argc)
-    die(0, "no name(s) to query specified");
-
-  if (nns) {
-    /* if nameservers given as names, resolve them.
-     * We only allow IPv4 nameservers as names for now.
-     * Ok, it is easy enouth to try both AAAA and A,
-     * but the question is what to do by default.
-     */
-    struct sockaddr_in sin;
-    int j, r = 0, opened = 0;
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(dns_set_opt(NULL, DNS_OPT_PORT, -1));
-    dns_add_serv(NULL, NULL);
-    for(i = 0; i < nns; ++i) {
-      if (dns_pton(AF_INET, ns[i], &sin.sin_addr) <= 0) {
-        struct dns_rr_a4 *rr;
-        if (!opened) {
-          if (dns_open(nctx) < 0)
-            die(errno, "unable to initialize dns context");
-          opened = 1;
-        }
-        rr = dns_resolve_a4(nctx, ns[i], 0);
-        if (!rr)
-          die(0, "unable to resolve nameserver %s: %s",
-              ns[i], dns_strerror(dns_status(nctx)));
-        for(j = 0; j < rr->dnsa4_nrr; ++j) {
-          sin.sin_addr = rr->dnsa4_addr[j];
-          if ((r = dns_add_serv_s(NULL, (struct sockaddr *)&sin)) < 0)
-            break;
-        }
-        free(rr);
-      }
-      else
-        r = dns_add_serv_s(NULL, (struct sockaddr *)&sin);
-      if (r < 0)
-        die(errno, "unable to add nameserver %s",
-             dns_xntop(AF_INET, &sin.sin_addr));
-    }
-  }
-  dns_free(nctx);
-
-  fd = dns_open(NULL);
-  if (fd < 0)
-    die(errno, "unable to initialize dns context");
-
-  if (verbose > 1)
-    dns_set_dbgfn(NULL, dbgcb);
-
-  if (flags)
-    dns_set_opt(NULL, DNS_OPT_FLAGS, flags);
-
-  for (i = 0; i < argc; ++i) {
-    char *name = argv[i];
-    union {
-      struct in_addr addr;
-      struct in6_addr addr6;
-    } a;
-    unsigned char dn[DNS_MAXDN];
-    enum dns_type l_qtyp = 0;
-    int abs;
-    if (dns_pton(AF_INET, name, &a.addr) > 0) {
-      dns_a4todn(&a.addr, 0, dn, sizeof(dn));
-      l_qtyp = DNS_T_PTR;
-      abs = 1;
-    }
-#ifdef HAVE_IPv6
-    else if (dns_pton(AF_INET6, name, &a.addr6) > 0) {
-      dns_a6todn(&a.addr6, 0, dn, sizeof(dn));
-      l_qtyp = DNS_T_PTR;
-      abs = 1;
-    }
-#endif
-    else if (!dns_ptodn(name, strlen(name), dn, sizeof(dn), &abs))
-      die(0, "invalid name `%s'\n", name);
-    else
-      l_qtyp = DNS_T_A;
-    if (qtyp) l_qtyp = qtyp;
-    q = query_new(name, dn, l_qtyp);
-    if (abs) abs = DNS_NOSRCH;
-    if (!dns_submit_dn(NULL, dn, qcls, l_qtyp, abs, 0, dnscb, q))
-      dnserror(q, dns_status(NULL));
-  }
-
-  FD_ZERO(&fds);
-  now = 0;
-  while((i = dns_timeouts(NULL, -1, now)) > 0) {
-    FD_SET(fd, &fds);
-    tv.tv_sec = i;
-    tv.tv_usec = 0;
-    i = select(fd+1, &fds, 0, 0, &tv);
-    now = time(NULL);
-    if (i > 0) dns_ioevent(NULL, now);
-  }
-
-  return errors ? 1 : notfound ? 100 : 0;
-}
+//
+// int main1(int argc, char **argv) {
+//   int i;
+//   int fd;
+//   fd_set fds;
+//   struct timeval tv;
+//   time_t now;
+//   char *ns[DNS_MAXSERV];
+//   int nns = 0;
+//   struct query *q;
+//   enum dns_type qtyp = 0;
+//   struct dns_ctx *nctx = NULL;
+//   int flags = 0;
+//
+//   if (!(progname = strrchr(argv[0], '/'))) progname = argv[0];
+//   else argv[0] = ++progname;
+//
+//   if (argc <= 1)
+//     die(0, "try `%s -h' for help", progname);
+//
+//   if (dns_init(NULL, 0) < 0 || !(nctx = dns_new(NULL)))
+//     die(errno, "unable to initialize dns library");
+//   /* we keep two dns contexts: one may be needed to resolve
+//    * nameservers if given as names, using default options.
+//    */
+//
+//   while((i = getopt(argc, argv, "vqt:c:an:o:f:h")) != EOF) switch(i) {
+//   case 'v': ++verbose; break;
+//   case 'q': --verbose; break;
+//   case 't':
+//     if (optarg[0] == '*' && !optarg[1])
+//       i = DNS_T_ANY;
+//     else if ((i = dns_findtypename(optarg)) <= 0)
+//       die(0, "unrecognized query type `%s'", optarg);
+//     qtyp = i;
+//     break;
+//   case 'c':
+//     if (optarg[0] == '*' && !optarg[1])
+//       i = DNS_C_ANY;
+//     else if ((i = dns_findclassname(optarg)) < 0)
+//       die(0, "unrecognized query class `%s'", optarg);
+//     qcls = i;
+//     break;
+//   case 'a':
+//     qtyp = DNS_T_ANY;
+//     ++verbose;
+//     break;
+//   case 'n':
+//     if (nns >= DNS_MAXSERV)
+//       die(0, "too many nameservers, %d max", DNS_MAXSERV);
+//     ns[nns++] = optarg;
+//     break;
+//   case 'o':
+//   case 'f': {
+//     char *opt;
+//     const char *const delim = " \t,;";
+//     for(opt = strtok(optarg, delim); opt != NULL; opt = strtok(NULL, delim)) {
+//       if (dns_set_opts(NULL, optarg) == 0)
+//         ;
+//       else if (strcmp(opt, "aa") == 0) flags |= DNS_AAONLY;
+//       else if (strcmp(optarg, "nord") == 0) flags |= DNS_NORD;
+//       else if (strcmp(optarg, "dnssec") == 0) flags |= DNS_SET_DO;
+//       else if (strcmp(optarg, "do")     == 0) flags |= DNS_SET_DO;
+//       else if (strcmp(optarg, "cd") == 0) flags |= DNS_SET_CD;
+//       else
+//         die(0, "invalid option: `%s'", opt);
+//     }
+//     break;
+//   }
+//   case 'h':
+//     printf(
+// "%s: simple DNS query tool (using udns version %s)\n"
+// "Usage: %s [options] domain-name...\n"
+// "where options are:\n"
+// " -h - print this help and exit\n"
+// " -v - be more verbose\n"
+// " -q - be less verbose\n"
+// " -t type - set query type (A, AAA, PTR etc)\n"
+// " -c class - set query class (IN (default), CH, HS, *)\n"
+// " -a - equivalent to -t ANY -v\n"
+// " -n ns - use given nameserver(s) instead of default\n"
+// "  (may be specified multiple times)\n"
+// " -o opt,opt,... (comma- or space-separated list,\n"
+// "                 may be specified more than once):\n"
+// "  set resovler options (the same as setting $RES_OPTIONS):\n"
+// "   timeout:sec  - initial query timeout\n"
+// "   attempts:num - number of attempt to resovle a query\n"
+// "   ndots:num    - if name has more than num dots, lookup it before search\n"
+// "   port:num     - port number for queries instead of default 53\n"
+// "   udpbuf:num   - size of UDP buffer (use EDNS0 if >512)\n"
+// "  or query flags:\n"
+// "   aa,nord,dnssec,do,cd - set query flag (auth-only, no recursion,\n"
+// "     enable DNSSEC (DNSSEC Ok), check disabled)\n"
+//       , progname, dns_version(), progname);
+//     return 0;
+//   default:
+//     die(0, "try `%s -h' for help", progname);
+//   }
+//
+//   argc -= optind; argv += optind;
+//   if (!argc)
+//     die(0, "no name(s) to query specified");
+//
+//   if (nns) {
+//     /* if nameservers given as names, resolve them.
+//      * We only allow IPv4 nameservers as names for now.
+//      * Ok, it is easy enouth to try both AAAA and A,
+//      * but the question is what to do by default.
+//      */
+//     struct sockaddr_in sin;
+//     int j, r = 0, opened = 0;
+//     memset(&sin, 0, sizeof(sin));
+//     sin.sin_family = AF_INET;
+//     sin.sin_port = htons(dns_set_opt(NULL, DNS_OPT_PORT, -1));
+//     dns_add_serv(NULL, NULL);
+//     for(i = 0; i < nns; ++i) {
+//       if (dns_pton(AF_INET, ns[i], &sin.sin_addr) <= 0) {
+//         struct dns_rr_a4 *rr;
+//         if (!opened) {
+//           if (dns_open(nctx) < 0)
+//             die(errno, "unable to initialize dns context");
+//           opened = 1;
+//         }
+//         rr = dns_resolve_a4(nctx, ns[i], 0);
+//         if (!rr)
+//           die(0, "unable to resolve nameserver %s: %s",
+//               ns[i], dns_strerror(dns_status(nctx)));
+//         for(j = 0; j < rr->dnsa4_nrr; ++j) {
+//           sin.sin_addr = rr->dnsa4_addr[j];
+//           if ((r = dns_add_serv_s(NULL, (struct sockaddr *)&sin)) < 0)
+//             break;
+//         }
+//         free(rr);
+//       }
+//       else
+//         r = dns_add_serv_s(NULL, (struct sockaddr *)&sin);
+//       if (r < 0)
+//         die(errno, "unable to add nameserver %s",
+//              dns_xntop(AF_INET, &sin.sin_addr));
+//     }
+//   }
+//   dns_free(nctx);
+//
+//   fd = dns_open(NULL);
+//   if (fd < 0)
+//     die(errno, "unable to initialize dns context");
+//
+//   if (verbose > 1)
+//     dns_set_dbgfn(NULL, dbgcb);
+//
+//   if (flags)
+//     dns_set_opt(NULL, DNS_OPT_FLAGS, flags);
+//
+//   for (i = 0; i < argc; ++i) {
+//     char *name = argv[i];
+//     union {
+//       struct in_addr addr;
+//       struct in6_addr addr6;
+//     } a;
+//     unsigned char dn[DNS_MAXDN];
+//     enum dns_type l_qtyp = 0;
+//     int abs;
+//     if (dns_pton(AF_INET, name, &a.addr) > 0) {
+//       dns_a4todn(&a.addr, 0, dn, sizeof(dn));
+//       l_qtyp = DNS_T_PTR;
+//       abs = 1;
+//     }
+// #ifdef HAVE_IPv6
+//     else if (dns_pton(AF_INET6, name, &a.addr6) > 0) {
+//       dns_a6todn(&a.addr6, 0, dn, sizeof(dn));
+//       l_qtyp = DNS_T_PTR;
+//       abs = 1;
+//     }
+// #endif
+//     else if (!dns_ptodn(name, strlen(name), dn, sizeof(dn), &abs))
+//       die(0, "invalid name `%s'\n", name);
+//     else
+//       l_qtyp = DNS_T_A;
+//     if (qtyp) l_qtyp = qtyp;
+//     q = query_new(name, dn, l_qtyp);
+//     if (abs) abs = DNS_NOSRCH;
+//     if (!dns_submit_dn(NULL, dn, qcls, l_qtyp, abs, 0, dnscb, q))
+//       dnserror(q, dns_status(NULL));
+//   }
+//
+//   FD_ZERO(&fds);
+//   now = 0;
+//   while((i = dns_timeouts(NULL, -1, now)) > 0) {
+//     FD_SET(fd, &fds);
+//     tv.tv_sec = i;
+//     tv.tv_usec = 0;
+//     i = select(fd+1, &fds, 0, 0, &tv);
+//     now = time(NULL);
+//     if (i > 0) dns_ioevent(NULL, now);
+//   }
+//
+//   return errors ? 1 : notfound ? 100 : 0;
+// }

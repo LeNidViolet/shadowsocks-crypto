@@ -26,7 +26,7 @@
 #include "udns/parsedns.h"
 
 // ==========
-static const int tcp_handle_max = 8;
+#define tcp_handle_max 8
 static int tcp_handle_index = 0;
 static uv_tcp_t *tcp_handles[tcp_handle_max] = { NULL };
 
@@ -155,7 +155,7 @@ void server_tcp_stop() {
     tcp_handle_index = 0;
 
     tcpsrv_signal_close();
-    ssnetio_on_msg(KEY, "tcp server exited");
+    ssnetio_on_msg(LOG_KEY, "tcp server exited");
 }
 
 
@@ -415,7 +415,7 @@ static int conn_cycle(const char *who, connection *a, connection *b) {
     if ( a->result < 0 ) {
         if ( UV_EOF != a->result ) {
             ssnetio_on_msg(
-                WARN,
+                LOG_WARN,
                 "%4d %s error: %s [%s]",
                 a->pn->index,
                 who,
@@ -560,7 +560,7 @@ int do_kill(proxy_node *pn) {
     if ( 0 != pn->outstanding ) {
         /* Wait for uncomplete operations */
         ssnetio_on_msg(
-            INFO,
+            LOG_INFO,
             "%4d waitting outstanding operation: %d [%s]",
             pn->index, pn->outstanding, pn->link_info);
         new_state = s_kill;
@@ -597,7 +597,7 @@ static int do_clear(proxy_node *pn) {
     pn_outstanding--;
 
     if ( 0 == pn_outstanding )
-        ssnetio_on_msg(INFO, "pn outstanding return to 0");
+        ssnetio_on_msg(LOG_INFO, "pn outstanding return to 0");
 
     return 0;
 }
@@ -781,7 +781,7 @@ static int do_handshake(proxy_node *pn) {
     outgoing = &pn->outgoing;
 
     if ( incoming->result < 0 ) {
-        ssnetio_on_msg(WARN, "%4d handshake read error: %s",
+        ssnetio_on_msg(LOG_WARN, "%4d handshake read error: %s",
                        pn->index, uv_strerror((int)incoming->result));
         new_state = do_kill(pn);
         BREAK_NOW;
@@ -792,7 +792,7 @@ static int do_handshake(proxy_node *pn) {
     incoming->rdstate = c_stop;
 
     if ( 0 != ssnetio_on_stream_decrypt(incoming, 0) ) {
-        ssnetio_on_msg(WARN, "%4d handshake data decrypt failed", pn->index);
+        ssnetio_on_msg(LOG_WARN, "%4d handshake data decrypt failed", pn->index);
         new_state = do_kill(pn);
         BREAK_NOW;
     }
@@ -800,7 +800,7 @@ static int do_handshake(proxy_node *pn) {
     /* Parser to get dest address  解析之后填充 outgoing.peer.domain */
     ret = s5_parse_addr(&incoming->ss_buf, &outgoing->peer);
     if ( 0 != ret ) {
-        ssnetio_on_msg(WARN, "%4d handshake parse addr error", pn->index);
+        ssnetio_on_msg(LOG_WARN, "%4d handshake parse addr error", pn->index);
         new_state = do_kill(pn);
         BREAK_NOW;
     }
@@ -877,7 +877,7 @@ static int do_req_lookup(proxy_node *pn) {
     outgoing = &pn->outgoing;
 
     if ( outgoing->result < 0 ) {
-        ssnetio_on_msg(WARN, "%4d lookup error for %s : %s",
+        ssnetio_on_msg(LOG_WARN, "%4d lookup error for %s : %s",
                        pn->index,
                        outgoing->peer.domain,
                        uv_strerror((int)outgoing->result));
@@ -961,7 +961,7 @@ static int do_dnsovertcp_lookup(proxy_node *pn) {
     outgoing = &pn->outgoing;
 
     if ( outgoing->result < 0 ) {
-        ssnetio_on_msg(WARN, "%4d lookup error for %s : %s",
+        ssnetio_on_msg(LOG_WARN, "%4d lookup error for %s : %s",
                        pn->index,
                        outgoing->peer.domain,
                        uv_strerror((int)outgoing->result));
@@ -998,7 +998,7 @@ static int do_req_connect(proxy_node *pn) {
 
     if ( 0 != outgoing->result ) {
         ssnetio_on_msg(
-            WARN,
+            LOG_WARN,
             "%4d connect to %s:%d failed: %s",
             pn->index,
             outgoing->peer.domain,

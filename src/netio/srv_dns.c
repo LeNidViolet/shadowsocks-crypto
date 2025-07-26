@@ -47,7 +47,7 @@ typedef struct {
 } dns_block;
 
 
-static const int dns_handle_max = 8;
+#define dns_handle_max 8
 static int dns_handle_index = 0;
 static uv_udp_t *dns_handles[dns_handle_max] = { NULL };
 
@@ -234,7 +234,7 @@ static void dnssrv_read_done(
 
     parse = ParseDnsRecord(buf->base, block->query_len);
     if ( !parse ) {
-        ssnetio_on_msg(WARN, "dns record parse failed length[%d]", block->query_len);
+        ssnetio_on_msg(LOG_WARN, "dns record parse failed length[%d]", block->query_len);
         BREAK_NOW;
     }
 
@@ -243,7 +243,7 @@ static void dnssrv_read_done(
         (parse->queryType != DNS_QUERY_TYPE_IPV4 && parse->queryType != DNS_QUERY_TYPE_IPV6) ) {
 
         ssnetio_on_msg(
-            WARN,
+            LOG_WARN,
             "unknow dns queryclass[%d] or querytype[%d]",
             parse->queryClass,
             parse->queryType);
@@ -276,7 +276,7 @@ static void dnssrv_read_done(
                                  parse->queryDomain,
                                  NULL,
                                  &hints) ) {
-            ssnetio_on_msg(WARN, "dns uv_getaddrinfo failed [%s]", block->domain);
+            ssnetio_on_msg(LOG_WARN, "dns uv_getaddrinfo failed [%s]", block->domain);
             BREAK_NOW;
         }
     }
@@ -353,5 +353,5 @@ void server_dns_stop() {
     dnssrv_signal_close();
     dns_cache_clear();
 
-    ssnetio_on_msg(KEY, "dns server exited");
+    ssnetio_on_msg(LOG_KEY, "dns server exited");
 }

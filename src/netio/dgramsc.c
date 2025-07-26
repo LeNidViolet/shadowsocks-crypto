@@ -22,6 +22,10 @@
  */
 #include "dgramsc.h"
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 static LIST_ENTRY ds_list;
 static int ds_inited = 0;
 static int ds_outstanding = 0;
@@ -124,5 +128,5 @@ static void dgrams_free(dgrams *ds) {
     ds_outstanding--;
 
     if ( 0 == ds_outstanding )
-        ssnetio_on_msg(KEY, "dgrams outstanding return to 0");
+        ssnetio_on_msg(LOG_KEY, "dgrams outstanding return to 0");
 }

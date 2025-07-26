@@ -76,3 +76,7 @@ SET(SHADOWSOCKSCRYPTO_SRC
 
 ADD_LIBRARY(shadowsocks-crypto STATIC ${SHADOWSOCKSCRYPTO_SRC})
 TARGET_LINK_LIBRARIES(shadowsocks-crypto mbedtls uv_a)
+
+if (MSVC)
+    TARGET_COMPILE_OPTIONS(shadowsocks-crypto PRIVATE "/utf-8")
+endif()

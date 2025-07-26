@@ -52,7 +52,7 @@ int tls_handshake_sni_cb(
     BREAK_ON_FALSE(name_len < sizeof(ss->sni_name));
     memcpy(ss->sni_name, name, name_len);
 
-    tlsflat_on_msg(INFO, "%4d [%s] SNI", ss->index, ss->sni_name);
+    tlsflat_on_msg(LOG_INFO, "%4d [%s] SNI", ss->index, ss->sni_name);
 
     result = 0;
 

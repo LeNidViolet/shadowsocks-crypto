@@ -20,7 +20,17 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#define strcasecmp _stricmp
+
+#else
 #include <netinet/in.h>
+#endif
+
 #include "shadowsocks-crypto/shadowsocks-crypto.h"
 #include "internal.h"
 #include "s5.h"

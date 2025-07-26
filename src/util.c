@@ -28,6 +28,10 @@
 #include "mbedtls/md5.h"
 #include "internal.h"
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 /* TODO: ADD AEAD CIPHER METHODS */
 
 static const crypto_info Methods[] = {

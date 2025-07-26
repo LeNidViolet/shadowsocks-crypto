@@ -23,7 +23,12 @@
 #ifndef SHADOWSOCKS_NETIO_DNS_CACHE_H
 #define SHADOWSOCKS_NETIO_DNS_CACHE_H
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <netinet/in.h>
+#endif
 #include "../comm/list.h"
 
 struct dns_cache_ip;

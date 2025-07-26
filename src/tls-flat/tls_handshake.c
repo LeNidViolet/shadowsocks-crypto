@@ -42,7 +42,7 @@ int handle_tls_handshake(tls_session *ts) {
 
         if ( ts->is_local ) {
             tlsflat_on_msg(
-                KEY,
+                LOG_KEY,
                 "%4d [%s] SSL HANDSHAKE DONE",
                 ss->index,
                 ss->sni_name[0] ? ss->sni_name : ss->remote.domain);
@@ -61,7 +61,7 @@ int handle_tls_handshake(tls_session *ts) {
             ret = tls_resign(ss->sni_name, ws_crt, &crt, &pk);
             if ( 0 != ret ) {
                 tlsflat_on_msg(
-                    ERROR,
+                    LOG_ERROR,
                     "%4d [%s] RESIGN CERT FAILED [%X]",
                     ss->index,
                     ss->sni_name,
@@ -105,7 +105,7 @@ int handle_tls_handshake(tls_session *ts) {
         /* TODO: Not TLS Data Stream, as a Tcp Data Stream to proxy */
 
         tlsflat_on_msg(
-            WARN,
+            LOG_WARN,
             "%4d [%s] MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO %s SIDE",
             ss->index,
             ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
@@ -116,7 +116,7 @@ int handle_tls_handshake(tls_session *ts) {
 
     default:
         tlsflat_on_msg(
-            WARN,
+            LOG_WARN,
             "%4d [%s] HANDSHAKE mbedtls_ssl_handshake FAILED[%d] AT %s SIDE",
             ss->index,
             ss->sni_name[0] ? ss->sni_name : ss->remote.domain,

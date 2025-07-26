@@ -58,7 +58,7 @@ int sscrypto_launch(const sscrypto_ctx *ctx) {
         ctx->config.root_cert,
         ctx->config.root_key);
     if ( 0 != ret ) {
-        sscrypto_on_msg(ERROR, "tlsflat init failed");
+        sscrypto_on_msg(LOG_ERROR, "tlsflat init failed");
         BREAK_NOW;
     }
 

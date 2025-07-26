@@ -272,16 +272,16 @@ static void tls_debug_out(
     case 0:
         break;
     case 1:
-        lv = ERROR;
+        lv = LOG_ERROR;
         break;
     case 2:
-        lv = KEY;
+        lv = LOG_KEY;
         break;
     case 3:
-        lv = INFO;
+        lv = LOG_INFO;
         break;
     case 4:
-        lv = DEBUG;
+        lv = LOG_DEBUG;
         break;
     default:
         break;

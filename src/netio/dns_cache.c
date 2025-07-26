@@ -24,6 +24,10 @@
 #include "dns_cache.h"
 #include "internal.h"
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 static LIST_ENTRY cache_list;
 static int entry_outstanding = 0;
 static int ip_outstanding = 0;
@@ -214,7 +218,7 @@ static void dns_cache_free(dns_cache_entry *dnsc) {
     entry_outstanding--;
 
     if ( 0 == entry_outstanding )
-        ssnetio_on_msg(INFO, "dns cache entry outstanding return to 0");
+        ssnetio_on_msg(LOG_INFO, "dns cache entry outstanding return to 0");
     if ( 0 == ip_outstanding )
-        ssnetio_on_msg(INFO, "dns cache ip outstanding return to 0");
+        ssnetio_on_msg(LOG_INFO, "dns cache ip outstanding return to 0");
 }

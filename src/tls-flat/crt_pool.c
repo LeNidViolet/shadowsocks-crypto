@@ -213,7 +213,7 @@ int crt_pool_add(
     ++pool_ncrt;
 
     tlsflat_on_msg(
-        INFO,
+        LOG_INFO,
         "CRT POOL ADD DOMAIN [%s] TOTAL[%d]",
         domain,
         pool_ncrt);

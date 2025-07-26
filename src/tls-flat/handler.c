@@ -133,7 +133,7 @@ int tlsflat_on_plain_stream(const buf_range *buf, int direct, void *ctx) {
     else
         ss->bytes_in += buf->data_len;
 
-    tlsflat_on_msg(DEBUG, "%4d [%s] ==> %d BYTES %s SIDE",
+    tlsflat_on_msg(LOG_DEBUG, "%4d [%s] ==> %d BYTES %s SIDE",
                    ss->index,
                    ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
                    (int)buf->data_len,

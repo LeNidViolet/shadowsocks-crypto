@@ -23,7 +23,9 @@
 #ifndef SHADOWSOCKS_NETIO_LIST_H
 #define SHADOWSOCKS_NETIO_LIST_H
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <windows.h>
+#else
 typedef struct _LIST_ENTRY {
     struct _LIST_ENTRY *Flink;
     struct _LIST_ENTRY *Blink;
