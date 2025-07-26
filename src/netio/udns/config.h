@@ -4,4 +4,6 @@
 #define HAVE_INET_PTON_NTOP 1
 #define HAVE_IPv6 1
 #define HAVE_POLL 1
+#ifdef _WIN32
 #define WINDOWS 1
+#endif

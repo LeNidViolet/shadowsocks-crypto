@@ -110,7 +110,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     ret = uv_tcp_bind(tcp_handle, addr, 0);
     if ( 0 != ret ) {
         ssnetio_on_msg(
-            ERROR,
+            LOG_ERROR,
             "tcp bind to %s:%d failed: %s",
             address.ip,
             address.port,
@@ -121,7 +121,7 @@ int server_tcp_launch(uv_loop_t *loop, const struct sockaddr *addr) {
     ret = uv_listen((uv_stream_t *)tcp_handle, SOMAXCONN, on_connection);
     if ( 0 != ret ) {
         ssnetio_on_msg(
-            ERROR,
+            LOG_ERROR,
             "tcp listen to %s:%d failed: %s",
             address.ip,
             address.port,

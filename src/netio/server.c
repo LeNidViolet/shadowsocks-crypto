@@ -167,7 +167,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_tcp_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                ERROR,
+                LOG_ERROR,
                 "tcp server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.ip,
@@ -179,7 +179,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
         ret = server_dgram_launch(loop, &s.addr);
         if ( 0 != ret ) {
             ssnetio_on_msg(
-                ERROR,
+                LOG_ERROR,
                 "dgram server launch failed: %s [%s:%d]",
                 uv_strerror(ret),
                 address.ip,
@@ -193,7 +193,7 @@ static void do_bind(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
             ret = server_dns_launch(loop, &s.addr);
             if ( 0 != ret ) {
                 ssnetio_on_msg(
-                    ERROR,
+                    LOG_ERROR,
                     "dns server launch failed: %s [%s:%d]",
                     uv_strerror(ret),
                     address.ip,
