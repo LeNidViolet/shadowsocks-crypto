@@ -35,7 +35,7 @@ typedef struct {
 
     const char *root_cert;      /* 根证书 文件路径 */
     const char *root_key;       /* 根证书秘钥 文件路径 */
-} sscrypto_cfg;
+} shadowsocks_crypto_cfg;
 
 typedef void (*FN_CALLBACK_ONMSG)   (int level, const char *msg);
 typedef void (*FN_CALLBACK_ONBIND)  (const char *host, unsigned short port);
@@ -74,15 +74,15 @@ typedef struct {
 
     FN_CALLBACK_ONPLAINSTREAM           on_plain_stream;
     FN_CALLBACK_ONPLAINDGRAM            on_plain_dgram;
-} sscrypto_callback;
+} shadowsocks_crypto_callback;
 
 typedef struct {
     // 基础配置
-    sscrypto_cfg config;
+    shadowsocks_crypto_cfg config;
 
     // 事件回调表
-    sscrypto_callback callbacks;
-} sscrypto_ctx;
+    shadowsocks_crypto_callback callbacks;
+} shadowsocks_crypto_ctx;
 
 
 /**
@@ -92,7 +92,7 @@ typedef struct {
  *
  * @return                      0 on success
  */
-int sscrypto_launch(const sscrypto_ctx *ctx);
-void sscrypto_stop();
+int shadowsocks_crypto_launch(const shadowsocks_crypto_ctx *ctx);
+void shadowsocks_crypto_stop();
 
 #endif //SHADOWSOCKS_CRYPTO_SHADOWSOCKS_CRYPTO_H

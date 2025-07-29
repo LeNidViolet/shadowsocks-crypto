@@ -27,7 +27,7 @@
 
 // ==========
 
-extern sscrypto_ctx srv_ctx;
+extern shadowsocks_crypto_ctx srv_ctx;
 
 static int dgram_read_local(uv_udp_t *handle);
 

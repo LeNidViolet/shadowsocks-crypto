@@ -93,7 +93,7 @@ BREAK_LABEL:
 
 // ===========
 // ===========
-extern sscrypto_ctx srv_ctx;
+extern shadowsocks_crypto_ctx srv_ctx;
 static void conn_alloc(uv_handle_t *handle, size_t size, uv_buf_t *buf);
 static void conn_read_done(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
 static void conn_timer_expire(uv_timer_t *handle);

@@ -29,9 +29,9 @@
 
 
 // ==========
-sscrypto_ctx srv_ctx;
+shadowsocks_crypto_ctx srv_ctx;
 
-static int server_run(sscrypto_ctx *ctx);
+static int server_run(shadowsocks_crypto_ctx *ctx);
 static void server_handle_walk_callback(uv_handle_t* Handle, void* arg);
 static void server_exit_async_cb(uv_async_t* handle);
 
@@ -42,7 +42,7 @@ union {
 
 
 /* LAUNCHER */
-int ssnetio_server_launch(const sscrypto_ctx *ctx) {
+int ssnetio_server_launch(const shadowsocks_crypto_ctx *ctx) {
     int ret = -1;
 
     BREAK_ON_NULL(ctx);
@@ -71,7 +71,7 @@ void ssnetio_server_port(ioctl_port *port) {
     port->stream_pause = ssnetio_stream_pause;
 }
 
-static int server_run(sscrypto_ctx *ctx) {
+static int server_run(shadowsocks_crypto_ctx *ctx) {
     uv_loop_t                   *loop;
     int                         ret;
 

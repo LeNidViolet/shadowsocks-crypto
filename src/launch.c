@@ -26,7 +26,7 @@
 crypto_env env = { 0 };
 static int ss_running = 0;
 
-int sscrypto_launch(const sscrypto_ctx *ctx) {
+int shadowsocks_crypto_launch(const shadowsocks_crypto_ctx *ctx) {
     int ret = -1;
     ioctl_port io_port;
 
@@ -84,7 +84,7 @@ BREAK_LABEL:
     return ret;
 }
 
-void sscrypto_stop() {
+void shadowsocks_crypto_stop() {
     if ( ss_running ) {
         ssnetio_server_stop();
         ss_running = 0;
