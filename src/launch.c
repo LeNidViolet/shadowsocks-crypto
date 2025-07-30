@@ -23,14 +23,14 @@
 #include <stdlib.h>
 #include "internal.h"
 
-crypto_env env = { 0 };
-static int ss_running = 0;
+crypto_env shadowsocks_env = { 0 };
+static int shadowsocks_running = 0;
 
 int shadowsocks_crypto_launch(const shadowsocks_crypto_ctx *ctx) {
     int ret = -1;
     ioctl_port io_port;
 
-    BREAK_ON_FALSE(0 == ss_running);
+    BREAK_ON_FALSE(0 == shadowsocks_running);
 
     BREAK_ON_NULL(ctx);
     BREAK_ON_NULL(ctx->config.method);
@@ -38,16 +38,16 @@ int shadowsocks_crypto_launch(const shadowsocks_crypto_ctx *ctx) {
     BREAK_ON_NULL(ctx->config.root_cert);
     BREAK_ON_NULL(ctx->config.root_key);
 
-    env.method = get_method_by_name(ctx->config.method);
-    BREAK_ON_NULL(env.method);
+    shadowsocks_env.method = get_method_by_name(ctx->config.method);
+    BREAK_ON_NULL(shadowsocks_env.method);
 
 
     /* 根据设置的密码生成加密用的KEY */
-    CHECK(0 == gen_key(ctx->config.password, env.key, env.method->key_len));
+    CHECK(0 == gen_key(ctx->config.password, shadowsocks_env.key, shadowsocks_env.method->key_len));
 
 
     /* 保存回调 */
-    env.callbacks = ctx->callbacks;
+    shadowsocks_env.callbacks = ctx->callbacks;
 
 
     /* 获取NETIO底层发送数据等接口.需要在TLSFLAT中使用 */
@@ -66,12 +66,12 @@ int shadowsocks_crypto_launch(const shadowsocks_crypto_ctx *ctx) {
     /* 初始化加密解密单元 */
     init_crypt_unit();
 
-    ss_running = 1;
+    shadowsocks_running = 1;
 
     /* 启动SS NETIO, 开始监听 */
     ret = ssnetio_server_launch(ctx);
 
-    ss_running = 0;
+    shadowsocks_running = 0;
 
     /* 释放加密解密单元资源 */
     free_crypt_unit();
@@ -85,8 +85,8 @@ BREAK_LABEL:
 }
 
 void shadowsocks_crypto_stop() {
-    if ( ss_running ) {
+    if ( shadowsocks_running ) {
         ssnetio_server_stop();
-        ss_running = 0;
+        shadowsocks_running = 0;
     }
 }

@@ -61,19 +61,19 @@ typedef struct {
 } DGRAM_SESSION_CRYP;
 
 
-extern crypto_env env;
+extern crypto_env shadowsocks_env;
 
 static void init_cipher(mbedtls_cipher_context_t *ctx, int mode) {
     const mbedtls_cipher_info_t *info;
 
     mbedtls_cipher_init(ctx);
-    info = mbedtls_cipher_info_from_type(env.method->type);
+    info = mbedtls_cipher_info_from_type(shadowsocks_env.method->type);
     CHECK(info);
     CHECK(0 == mbedtls_cipher_setup(ctx, info));
     CHECK(0 == mbedtls_cipher_setkey(
         ctx,
-        env.key,
-        8 * env.method->key_len,
+        shadowsocks_env.key,
+        8 * shadowsocks_env.method->key_len,
         mode));
 }
 
@@ -98,14 +98,14 @@ void sscrypto_on_msg(int level, const char *format, ...) {
     vsnprintf(msg, sizeof(msg), format, ap);
     va_end(ap);
 
-    if ( env.callbacks.on_msg ) {
-        env.callbacks.on_msg(level, msg);
+    if ( shadowsocks_env.callbacks.on_msg ) {
+        shadowsocks_env.callbacks.on_msg(level, msg);
     }
 }
 
 void sscrypto_on_bind(const char *host, unsigned short port) {
-    if ( env.callbacks.on_bind ) {
-        env.callbacks.on_bind(host, port);
+    if ( shadowsocks_env.callbacks.on_bind ) {
+        shadowsocks_env.callbacks.on_bind(host, port);
     }
 }
 
@@ -143,8 +143,8 @@ void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx) {
         tlsflat_on_stream_connection_made(addr, session->stream_id, session, &session->tls_ctx);
     }
 
-    if ( env.callbacks.on_stream_connection_made ) {
-        env.callbacks.on_stream_connection_made(
+    if ( shadowsocks_env.callbacks.on_stream_connection_made ) {
+        shadowsocks_env.callbacks.on_stream_connection_made(
             addr->local->domain,
             addr->local->ip,
             addr->local->port,
@@ -167,10 +167,10 @@ void sscrypto_on_stream_teardown(void *ctx) {
         tlsflat_on_stream_teardown(session->tls_ctx);
     }
 
-    if ( env.callbacks.on_stream_teardown ) {
+    if ( shadowsocks_env.callbacks.on_stream_teardown ) {
         /* 如果链接未链接上 不用继续向上调用 */
         if ( session->connected ) {
-            env.callbacks.on_stream_teardown(session->index);
+            shadowsocks_env.callbacks.on_stream_teardown(session->index);
         }
     }
 
@@ -195,8 +195,8 @@ void sscrypto_on_new_dgram(const address_pair *addr, void **ctx) {
     session->index = dgram_index++;
 
     *ctx = session;
-    if ( env.callbacks.on_dgram_connection_made ) {
-        env.callbacks.on_dgram_connection_made(
+    if ( shadowsocks_env.callbacks.on_dgram_connection_made ) {
+        shadowsocks_env.callbacks.on_dgram_connection_made(
             addr->local->domain,
             addr->local->ip,
             addr->local->port,
@@ -215,8 +215,8 @@ void sscrypto_on_dgram_teardown(void *ctx) {
     session = (DGRAM_SESSION_CRYP *)ctx;
     CHECK(session);
 
-    if ( env.callbacks.on_dgram_teardown ) {
-        env.callbacks.on_dgram_teardown(session->index);
+    if ( shadowsocks_env.callbacks.on_dgram_teardown ) {
+        shadowsocks_env.callbacks.on_dgram_teardown(session->index);
     }
 
     if ( DEBUG_CHECKS )
@@ -240,8 +240,8 @@ int sscrypto_on_plain_stream(const BUF_RANGE *buf, int direct, void *ctx) {
         BREAK_NOW;
     }
 
-    if ( env.callbacks.on_plain_stream ) {
-        env.callbacks.on_plain_stream(
+    if ( shadowsocks_env.callbacks.on_plain_stream ) {
+        shadowsocks_env.callbacks.on_plain_stream(
             buf->data_base,
             buf->data_len,
             STREAM_UP == direct,
@@ -261,8 +261,8 @@ void sscrypto_tls_on_plain_stream(const char *data, size_t data_len, int direct,
     session = (STREAM_SESSION_CRYP *)ss_ctx;
     CHECK(session);
 
-    if ( env.callbacks.on_plain_stream ) {
-        env.callbacks.on_plain_stream(
+    if ( shadowsocks_env.callbacks.on_plain_stream ) {
+        shadowsocks_env.callbacks.on_plain_stream(
             data,
             data_len,
             STREAM_UP == direct,
@@ -277,8 +277,8 @@ void sscrypto_on_plain_dgram(const BUF_RANGE *buf, int direct, void *ctx) {
     session = (DGRAM_SESSION_CRYP *)ctx;
     CHECK(session);
 
-    if ( env.callbacks.on_plain_dgram ) {
-        env.callbacks.on_plain_dgram(
+    if ( shadowsocks_env.callbacks.on_plain_dgram ) {
+        shadowsocks_env.callbacks.on_plain_dgram(
             buf->data_base,
             buf->data_len,
             STREAM_UP == direct,
@@ -295,7 +295,7 @@ int sscrypto_on_stream_encrypt(BUF_RANGE *buf, void *ctx) {
     CHECK(buf->data_len <= sizeof(crypto_space));
 
     session = (STREAM_SESSION_CRYP *)ctx;
-    iv_len = env.method->iv_len;
+    iv_len = shadowsocks_env.method->iv_len;
 
     if ( session->first_encrypt ) {
         const char *seed = "seed name here";
@@ -358,7 +358,7 @@ int sscrypto_on_stream_decrypt(BUF_RANGE *buf, void *ctx) {
     CHECK(buf->data_len <= sizeof(crypto_space));
 
     session = (STREAM_SESSION_CRYP *)ctx;
-    iv_len = env.method->iv_len;
+    iv_len = shadowsocks_env.method->iv_len;
 
     if ( session->first_decrypt ) {
         if ( buf->data_len < iv_len )
@@ -411,7 +411,7 @@ int sscrypto_on_dgram_encrypt(BUF_RANGE *buf) {
     size_t encrypt_len;
     unsigned char *pos;
 
-    iv_len = env.method->iv_len;
+    iv_len = shadowsocks_env.method->iv_len;
     ret = gen_iv(pers, iv_encrypt, iv_len);
     BREAK_ON_FAILURE(ret);
 
@@ -458,7 +458,7 @@ int sscrypto_on_dgram_decrypt(BUF_RANGE *buf) {
     char *pos;
     char iv_decrypt[MAX_CRYPTO_SALT_LEN];
 
-    iv_len = env.method->iv_len;
+    iv_len = shadowsocks_env.method->iv_len;
 
     memcpy(iv_decrypt, buf->buf_base, iv_len);
 
