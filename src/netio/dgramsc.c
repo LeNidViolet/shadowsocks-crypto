@@ -105,9 +105,13 @@ static void dgrams_close(dgrams *ds) {
     if ( ds->state < u_closing1 ) {
         ds->state = u_closing1;
 
-        uv_timer_stop(&ds->timer);
-        uv_close((uv_handle_t *)&ds->udp_out, dgrams_close_done);
-        uv_close((uv_handle_t *)&ds->timer, dgrams_close_done);
+        if (!uv_is_closing((uv_handle_t *)&ds->udp_out)) {
+            uv_close((uv_handle_t *)&ds->udp_out, dgrams_close_done);
+        }
+        if (!uv_is_closing((uv_handle_t *)&ds->timer)) {
+            uv_timer_stop(&ds->timer);
+            uv_close((uv_handle_t *)&ds->timer, dgrams_close_done);
+        }
     }
 }
 
