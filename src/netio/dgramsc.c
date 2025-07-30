@@ -95,7 +95,9 @@ void dgrams_clear(void) {
         list = RemoveHeadList(&ds_list);
         ds = CONTAINER_OF(list, dgrams, list);
 
-        dgrams_close(ds);
+        // dgrams_close(ds);
+        // 我们目前使用uv walk遍历所有句柄进行关闭 这里就直接释放资源了
+        dgrams_free(ds);
     }
 }
 
