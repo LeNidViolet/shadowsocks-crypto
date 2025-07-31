@@ -101,18 +101,18 @@ static void dgram_alloc_cb_local(uv_handle_t *handle, size_t suggested_size, uv_
 static void dgram_read_done_local(
     uv_udp_t *handle, ssize_t nread,
     const uv_buf_t *buf, const struct sockaddr *addr, unsigned flags);
-static void dgram_send_remote(dgrams *ds);
+static void dgram_send_remote(DGRAMS *ds);
 static void dgram_send_done_remote(uv_udp_send_t *req, int status);
-static void dgram_read_remote(dgrams *ds);
+static void dgram_read_remote(DGRAMS *ds);
 static void dgram_alloc_cb_remote(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 static void dgram_read_done_remote(
     uv_udp_t *handle, ssize_t nread, const uv_buf_t *buf,
     const struct sockaddr *addr, unsigned flags);
 static void dgram_getaddrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
-static void dgram_lookup(dgrams *ds);
-static void dgram_send_local(dgrams *ds, uv_buf_t *buf);
+static void dgram_lookup(DGRAMS *ds);
+static void dgram_send_local(DGRAMS *ds, uv_buf_t *buf);
 static void dgram_send_done_local(uv_udp_send_t *req, int status);
-static void dgram_timer_reset(dgrams *ds);
+static void dgram_timer_reset(DGRAMS *ds);
 static void dgram_timer_expire(uv_timer_t *handle);
 
 
@@ -151,7 +151,7 @@ static void dgram_read_done_local(
     ADDRESS srv_addr = {0};
     ADDRESS clt_addr = {0};
     char key[128];
-    dgrams *ds;
+    DGRAMS *ds;
     uv_loop_t *loop;
 
     (void)flags;
@@ -218,7 +218,7 @@ BREAK_LABEL:
     return;
 }
 
-static void dgram_lookup(dgrams *ds) {
+static void dgram_lookup(DGRAMS *ds) {
     uv_loop_t *loop;
     const char* host;
     struct addrinfo hints;
@@ -282,12 +282,12 @@ static void dgram_lookup(dgrams *ds) {
 static void dgram_getaddrinfo_done(
     // ReSharper disable once CppParameterMayBeConst
     uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
-    dgrams *ds;
+    DGRAMS *ds;
     struct addrinfo *ai;
     struct addrinfo *ai_ipv4 = NULL;
     struct addrinfo *ai_ipv6 = NULL;
 
-    ds = CONTAINER_OF(req, dgrams, req_dns);
+    ds = CONTAINER_OF(req, DGRAMS, req_dns);
 
     if ( 0 == status ) {
         for ( ai = addrs; ai != NULL; ai = ai->ai_next ) {
@@ -323,7 +323,7 @@ static void dgram_getaddrinfo_done(
     uv_freeaddrinfo(addrs);
 }
 
-static void dgram_send_remote(dgrams *ds) {
+static void dgram_send_remote(DGRAMS *ds) {
     uv_buf_t buf_t;
     BUF_RANGE *buf;
 
@@ -349,16 +349,16 @@ static void dgram_send_remote(dgrams *ds) {
 
 // ReSharper disable once CppParameterMayBeConst
 static void dgram_send_done_remote(uv_udp_send_t *req, int status) {
-    dgrams *ds;
+    DGRAMS *ds;
 
     (void)status;
 
-    ds = CONTAINER_OF(req, dgrams, req_c);
+    ds = CONTAINER_OF(req, DGRAMS, req_c);
     CHECK(0 == dgram_read_local(ds->udp_in));
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
-static void dgram_send_local(dgrams *ds, uv_buf_t *buf) {
+static void dgram_send_local(DGRAMS *ds, uv_buf_t *buf) {
     if ( 0 == uv_udp_send(
         &ds->req_s,
         ds->udp_in,
@@ -375,15 +375,15 @@ static void dgram_send_local(dgrams *ds, uv_buf_t *buf) {
 
 // ReSharper disable once CppParameterMayBeConst
 static void dgram_send_done_local(uv_udp_send_t *req, int status) {
-    dgrams *ds;
+    DGRAMS *ds;
 
     (void)status;
 
-    ds = CONTAINER_OF(req, dgrams, req_s);
+    ds = CONTAINER_OF(req, DGRAMS, req_s);
     dgram_read_remote(ds);
 }
 
-static void dgram_read_remote(dgrams *ds) {
+static void dgram_read_remote(DGRAMS *ds) {
     CHECK(0 == uv_udp_recv_start(
         &ds->udp_out,
         dgram_alloc_cb_remote,
@@ -396,7 +396,7 @@ static void dgram_alloc_cb_remote(
     uv_handle_t *handle,
     // ReSharper disable once CppParameterMayBeConst
     size_t suggested_size, uv_buf_t *buf) {
-    dgrams *ds;
+    DGRAMS *ds;
 
     (void)suggested_size;
 
@@ -413,7 +413,7 @@ static void dgram_read_done_remote(
     // ReSharper disable once CppParameterMayBeConst
     unsigned flags) {
 
-    dgrams *ds;
+    DGRAMS *ds;
     BUF_RANGE *buf_r;
     uv_buf_t buf_t;
     int hdr_len = 0;
@@ -425,7 +425,7 @@ static void dgram_read_done_remote(
     if ( nread <= 0 )
         BREAK_NOW;
 
-    ds = CONTAINER_OF(handle, dgrams, udp_out);
+    ds = CONTAINER_OF(handle, DGRAMS, udp_out);
     buf_r = &ds->ss_buf;
     ASSERT(buf->base == buf_r->buf_base);
 
@@ -471,7 +471,7 @@ BREAK_LABEL:
     return ;
 }
 
-static void dgram_timer_reset(dgrams *ds) {
+static void dgram_timer_reset(DGRAMS *ds) {
     CHECK(0 == uv_timer_start(
         &ds->timer,
         dgram_timer_expire,
@@ -480,9 +480,9 @@ static void dgram_timer_reset(dgrams *ds) {
 }
 
 static void dgram_timer_expire(uv_timer_t *handle) {
-    dgrams *ds;
+    DGRAMS *ds;
 
-    ds = CONTAINER_OF(handle, dgrams, timer);
+    ds = CONTAINER_OF(handle, DGRAMS, timer);
     ssnetio_on_dgram_teardown(ds->ctx);
     dgrams_remove(ds);
 }

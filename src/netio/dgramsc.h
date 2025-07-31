@@ -69,12 +69,12 @@ typedef struct {
     BUF_RANGE ss_buf;
 
     void *ctx;
-} dgrams;
+} DGRAMS;
 
 void dgrams_init(void);
-dgrams *dgrams_add(const char *key, uv_loop_t *loop);
-dgrams *dgrams_find_by_key(const char *key);
-void dgrams_remove(dgrams *ds);
+DGRAMS *dgrams_add(const char *key, uv_loop_t *loop);
+DGRAMS *dgrams_find_by_key(const char *key);
+void dgrams_remove(DGRAMS *ds);
 void dgrams_clear(void);
 
 #endif //SHADOWSOCKS_NETIO_DGRAMSC_H

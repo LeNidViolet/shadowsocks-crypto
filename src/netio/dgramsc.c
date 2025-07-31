@@ -30,8 +30,8 @@ static LIST_ENTRY ds_list;
 static int ds_inited = 0;
 static int ds_outstanding = 0;
 
-static void dgrams_close(dgrams *ds);
-static void dgrams_free(dgrams *ds);
+static void dgrams_close(DGRAMS *ds);
+static void dgrams_free(DGRAMS *ds);
 static void dgrams_close_done(uv_handle_t *handle);
 
 void dgrams_init(void) {
@@ -41,8 +41,8 @@ void dgrams_init(void) {
     }
 }
 
-dgrams *dgrams_add(const char *key, uv_loop_t *loop) {
-    dgrams *ds;
+DGRAMS *dgrams_add(const char *key, uv_loop_t *loop) {
+    DGRAMS *ds;
 
     ENSURE((ds = malloc(sizeof(*ds))) != NULL);
     memset(ds, 0, sizeof(*ds));
@@ -60,14 +60,14 @@ dgrams *dgrams_add(const char *key, uv_loop_t *loop) {
     return ds;
 }
 
-dgrams *dgrams_find_by_key(const char *key) {
-    dgrams *ret = NULL, *ds;
+DGRAMS *dgrams_find_by_key(const char *key) {
+    DGRAMS *ret = NULL, *ds;
     LIST_ENTRY *next;
 
     BREAK_ON_NULL(key);
 
     for ( next = ds_list.Blink; next != &ds_list ; next = next->Blink ) {
-        ds = CONTAINER_OF(next, dgrams, list);
+        ds = CONTAINER_OF(next, DGRAMS, list);
 
         if ( 0 == strcasecmp(key, ds->key) ) {
             ret = ds;
@@ -80,7 +80,7 @@ BREAK_LABEL:
     return ret;
 }
 
-void dgrams_remove(dgrams *ds) {
+void dgrams_remove(DGRAMS *ds) {
     if ( ds ) {
         RemoveEntryList(&ds->list);
         dgrams_close(ds);
@@ -88,12 +88,12 @@ void dgrams_remove(dgrams *ds) {
 }
 
 void dgrams_clear(void) {
-    dgrams *ds;
+    DGRAMS *ds;
     LIST_ENTRY *list;
 
     while ( !IsListEmpty(&ds_list) ) {
         list = RemoveHeadList(&ds_list);
-        ds = CONTAINER_OF(list, dgrams, list);
+        ds = CONTAINER_OF(list, DGRAMS, list);
 
         // dgrams_close(ds);
         // 我们目前使用uv walk遍历所有句柄进行关闭 这里就直接释放资源了
@@ -101,7 +101,7 @@ void dgrams_clear(void) {
     }
 }
 
-static void dgrams_close(dgrams *ds) {
+static void dgrams_close(DGRAMS *ds) {
     if ( ds->state < u_closing1 ) {
         ds->state = u_closing1;
 
@@ -117,7 +117,7 @@ static void dgrams_close(dgrams *ds) {
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
 static void dgrams_close_done(uv_handle_t *handle) {
-    dgrams *ds;
+    DGRAMS *ds;
 
     ds = uv_handle_get_data(handle);
 
@@ -127,7 +127,7 @@ static void dgrams_close_done(uv_handle_t *handle) {
     }
 }
 
-static void dgrams_free(dgrams *ds) {
+static void dgrams_free(DGRAMS *ds) {
     if ( DEBUG_CHECKS )
         memset(ds, -1, sizeof(*ds));
     free(ds);
