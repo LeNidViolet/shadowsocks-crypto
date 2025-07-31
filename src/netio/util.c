@@ -35,7 +35,7 @@
 #include "internal.h"
 #include "s5.h"
 
-int sockaddr_to_str(const struct sockaddr *addr, ADDRESS *addr_s, int set_port) {
+int sockaddr_to_str(const struct sockaddr *addr, ADDRESS *addr_s, const int set_port) {
     const struct sockaddr_in6 *in6;
     const struct sockaddr_in *in;
 
@@ -78,11 +78,10 @@ void sockaddr_cpy(const struct sockaddr *src, struct sockaddr *dst) {
 
     default:
         UNREACHABLE();
-        break;
     }
 }
 
-int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int cmp_port) {
+int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, const int cmp_port) {
     int ret = 0;
     const struct sockaddr_in6 *in6s;
     const struct sockaddr_in *ins;
@@ -119,7 +118,6 @@ int sockaddr_equal(const struct sockaddr *src, const struct sockaddr *dst, int c
 
     default:
         UNREACHABLE();
-        break;
     }
 
     ret = 1;
@@ -128,7 +126,7 @@ BREAK_LABEL:
     return ret;
 }
 
-void sockaddr_set_port(struct sockaddr *addr, unsigned short port) {
+void sockaddr_set_port(struct sockaddr *addr, const unsigned short port) {
     struct sockaddr_in6 *in6;
     struct sockaddr_in *in;
 
@@ -145,11 +143,11 @@ void sockaddr_set_port(struct sockaddr *addr, unsigned short port) {
 
     default:
         UNREACHABLE();
-        break;
     }
 }
 
-int str_tcp_endpoint(const uv_tcp_t *tcp_handle, ENDPOINT ep, ADDRESS *addr_s) {
+// ReSharper disable once CppDFAConstantFunctionResult
+int str_tcp_endpoint(const uv_tcp_t *tcp_handle, const ENDPOINT ep, ADDRESS *addr_s) {
     union {
         struct sockaddr_in6 addr6;
         struct sockaddr_in addr4;
@@ -173,7 +171,7 @@ int str_tcp_endpoint(const uv_tcp_t *tcp_handle, ENDPOINT ep, ADDRESS *addr_s) {
 }
 
 
-int s5_simple_check(const char *data, size_t data_len) {
+int s5_simple_check(const char *data, const size_t data_len) {
     int ret;
     const char *p;
     int nmethod, i, method;

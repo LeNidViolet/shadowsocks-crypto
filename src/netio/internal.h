@@ -62,7 +62,7 @@ typedef struct {
     unsigned char rdstate;
     unsigned char wrstate;
     unsigned int idle_timeout;
-    struct proxy_node_ *pn;  /* Backlink */
+    struct PROXY_NODE_ *pn;  /* Backlink */
     ssize_t result;
     union {
         uv_handle_t handle;
@@ -87,7 +87,7 @@ typedef struct {
     BUF_RANGE ss_buf;
 } CONN;
 
-typedef struct proxy_node_{
+typedef struct PROXY_NODE_{
     int state;
     unsigned int index;
     uv_loop_t *loop;

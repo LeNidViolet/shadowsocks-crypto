@@ -45,8 +45,7 @@ void dns_cache_init(void) {
     }
 }
 
-// ReSharper disable once CppParameterMayBeConst
-struct sockaddr* dns_cache_find_ip(const char *host, int req_ipv4) {
+struct sockaddr* dns_cache_find_ip(const char *host, const int req_ipv4) {
     struct sockaddr *ret = NULL;
     dns_cache_entry *dnsc;
     LIST_ENTRY *next;
@@ -124,7 +123,7 @@ BREAK_LABEL:
     return ret;
 }
 
-static dns_cache_ip* dns_cache_ip_capture(dns_cache_entry *dnsc, const struct sockaddr *addr) {
+static dns_cache_ip* dns_cache_ip_capture(const dns_cache_entry *dnsc, const struct sockaddr *addr) {
     dns_cache_ip* ret = NULL;
     int equal;
 

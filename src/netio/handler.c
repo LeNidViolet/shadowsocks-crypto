@@ -25,10 +25,10 @@
 // ==========
 void sscrypto_on_msg(int level, const char *format, ...);
 void sscrypto_on_bind(const char *host, unsigned short port);
-void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx);
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx);
 void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id);
 void sscrypto_on_stream_teardown(void *ctx);
-void sscrypto_on_new_dgram(const address_pair *addr, void **ctx);
+void sscrypto_on_new_dgram(const ADDRESS_PAIR *addr, void **ctx);
 void sscrypto_on_dgram_teardown(void *ctx);
 int  sscrypto_on_plain_stream(const BUF_RANGE *buf, int direct, void *ctx);
 void sscrypto_on_plain_dgram(const BUF_RANGE *buf, int direct, void *ctx);
@@ -66,7 +66,7 @@ void ssnetio_on_bind(const char *host, unsigned short port) {
 }
 
 void ssnetio_on_connection_made(PROXY_NODE *pn) {
-    address_pair pair;
+    ADDRESS_PAIR pair;
 
     pair.local = &pn->incoming.peer;
     pair.remote = &pn->outgoing.peer;
@@ -88,7 +88,7 @@ void ssnetio_on_stream_teardown(PROXY_NODE *pn) {
 }
 
 void ssnetio_on_new_dgram(ADDRESS *local, ADDRESS *remote, void **ctx) {
-    address_pair pair;
+    ADDRESS_PAIR pair;
 
     pair.local = local;
     pair.remote = remote;

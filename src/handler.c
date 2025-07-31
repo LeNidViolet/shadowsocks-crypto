@@ -132,7 +132,7 @@ void sscrypto_on_new_stream(const ADDRESS *addr, void **ctx, void *stream_id) {
     ssn_outstanding++;
 }
 
-void sscrypto_on_stream_connection_made(address_pair *addr, void *ctx) {
+void sscrypto_on_stream_connection_made(ADDRESS_PAIR *addr, void *ctx) {
     STREAM_SESSION_CRYP *session;
 
     session = (STREAM_SESSION_CRYP *)ctx;
@@ -185,7 +185,7 @@ void sscrypto_on_stream_teardown(void *ctx) {
     ssn_outstanding--;
 }
 
-void sscrypto_on_new_dgram(const address_pair *addr, void **ctx) {
+void sscrypto_on_new_dgram(const ADDRESS_PAIR *addr, void **ctx) {
     static int dgram_index = 0;
     DGRAM_SESSION_CRYP *session;
 

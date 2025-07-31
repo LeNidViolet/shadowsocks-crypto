@@ -41,12 +41,14 @@ void tlsflat_on_msg(int level, const char *format, ...) {
 }
 
 /* 解密明文向上传递 */
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+// ReSharper disable once CppParameterMayBeConst
 void tlsflat_plain_stream(stream_session *ss, int direct, const char *data, size_t data_len) {
     sscrypto_tls_on_plain_stream(data, data_len, direct, ss->caller_ctx);
 }
 
 /* 对外接口, 应当在TLS连接创建完毕时调用 */
-void tlsflat_on_stream_connection_made(const address_pair *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
+void tlsflat_on_stream_connection_made(const ADDRESS_PAIR *addr, void *stream_id, void *caller_ctx, void **tls_ctx) {
     static unsigned int index = 0;
     stream_session *ss;
     const int init_size = 1024;

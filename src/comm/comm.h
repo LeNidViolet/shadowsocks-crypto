@@ -96,7 +96,7 @@ typedef struct {
 typedef struct {
     ADDRESS *local;
     ADDRESS *remote;
-} address_pair;
+} ADDRESS_PAIR;
 
 typedef struct {
     char *buf_base;

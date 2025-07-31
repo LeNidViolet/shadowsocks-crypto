@@ -43,6 +43,7 @@ static int tls_clt_init(tls_clt *clt);
 static int tls_srv_init(tls_srv *srv, const char *root_crt, const char *root_key);
 
 
+
 TLS tls;
 ioctl_port ioctlp = {0};
 
@@ -258,6 +259,7 @@ static void tls_clear(void) {
 
 static void tls_debug_out(
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
+    // ReSharper disable once CppParameterMayBeConst
     void *ctx, int level,
     // ReSharper disable once CppParameterMayBeConst
     const char *file, int line,

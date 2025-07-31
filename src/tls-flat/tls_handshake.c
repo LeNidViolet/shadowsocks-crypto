@@ -22,6 +22,7 @@
  */
 #include <stdlib.h>
 #include "internal.h"
+#include "mbedtls/error.h"
 
 extern ioctl_port ioctlp;
 
@@ -31,6 +32,7 @@ int handle_tls_handshake(tls_session *ts) {
     const mbedtls_x509_crt *ws_crt;
     mbedtls_x509_crt *crt;
     mbedtls_pk_context *pk;
+    char err_buf[256] = {};
 
     ASSERT(tls_handshaking == ts->tls_state);
     ss = ts->ss;
@@ -115,12 +117,14 @@ int handle_tls_handshake(tls_session *ts) {
         break;
 
     default:
+        mbedtls_strerror(ret, err_buf, sizeof(err_buf));
         tlsflat_on_msg(
             LOG_WARN,
-            "%4d [%s] HANDSHAKE mbedtls_ssl_handshake FAILED[%d] AT %s SIDE",
+            "%4d [%s] HANDSHAKE mbedtls_ssl_handshake FAILED[%d][%s] AT %s SIDE",
             ss->index,
             ss->sni_name[0] ? ss->sni_name : ss->remote.domain,
             ret,
+            err_buf,
             ts->is_local ? "SERVER" : "CLIENT"
         );
         action = TERMINATE;
