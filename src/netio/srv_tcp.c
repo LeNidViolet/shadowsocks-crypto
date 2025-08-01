@@ -229,7 +229,9 @@ static void conn_read_done(uv_stream_t *handle, ssize_t nread, const uv_buf_t *b
     CONN *conn;
 
     conn = uv_handle_get_data((uv_handle_t*)handle);
-    ASSERT(conn->ss_buf.buf_base == buf->base);
+    if (nread > 0) {
+        ASSERT(conn->ss_buf.buf_base == buf->base);
+    }
     ASSERT(c_busy == conn->rdstate);
     conn->rdstate = c_done;
     conn->result = nread;
@@ -294,8 +296,12 @@ static void conn_close(CONN *conn) {
     conn->wrstate = c_dead;
     uv_handle_set_data((uv_handle_t*)&conn->timer_handle, conn);
     uv_handle_set_data(&conn->handle.handle, conn);
-    uv_close(&conn->handle.handle, conn_close_done);
-    uv_close((uv_handle_t*)&conn->timer_handle, conn_close_done);
+    if (!uv_is_closing(&conn->handle.handle)) {
+        uv_close(&conn->handle.handle, conn_close_done);
+    }
+    if (!uv_is_closing((uv_handle_t*)&conn->timer_handle)) {
+        uv_close((uv_handle_t*)&conn->timer_handle, conn_close_done);
+    }
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
@@ -649,6 +655,14 @@ static int do_handshake(PROXY_NODE *pn) {
     if ( 0 != ssnetio_on_stream_decrypt(incoming, 0) ) {
         ssnetio_on_msg(LOG_WARN, "%4d handshake data decrypt failed", pn->index);
         new_state = do_kill(pn);
+        BREAK_NOW;
+    }
+
+    // 有可能第一次只传一个IV过来
+    if (incoming->ss_buf.data_len == 0) {
+        conn_read(incoming);
+        // 数据不足 继续读取数据
+        new_state = s_handshake;
         BREAK_NOW;
     }
 
